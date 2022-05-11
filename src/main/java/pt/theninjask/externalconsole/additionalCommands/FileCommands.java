@@ -125,6 +125,8 @@ public class FileCommands {
 
 	private static ExternalConsoleCommand tree = new ExternalConsoleCommand() {
 
+		private static final int QUEUE_LIMIT = 10;
+		
 		private static final String ENTRY_NO_NEXT = "└───";
 
 		private static final String ENTRY_NEXT = "├───";
@@ -183,11 +185,25 @@ public class FileCommands {
 			linkedList[ARRAY_INDEX] = 0;
 			linkedList[ROOT_ARRAY] = null;
 			linkedList[PRE_STRING] = "";
+			int currQueue = 0;
+			int queuePatience = 0;
+			StringBuilder build = new StringBuilder();
 			for (int i = 0; i < ((File[]) linkedList[ARRAY]).length; i++) {
 				File sub = ((File[]) linkedList[ARRAY])[i];
 				boolean hasNext = i + 1 < ((File[]) linkedList[ARRAY]).length;
-				ExternalConsole.println(String.format("%s%s%s", linkedList[PRE_STRING],
+				build.append(String.format("%s%s%s", linkedList[PRE_STRING],
 						hasNext ? ENTRY_NEXT : ENTRY_NO_NEXT, sub.getName()));
+				currQueue++;
+				if(currQueue>queuePatience) {
+					ExternalConsole.println(build.toString());
+					build = new StringBuilder();
+					queuePatience += 1 + currQueue/2;
+					if(queuePatience>QUEUE_LIMIT)
+						queuePatience = QUEUE_LIMIT;
+					currQueue = 0;
+				}else {
+					build.append('\n');
+				}
 				if (sub.isDirectory())
 					files = sub.listFiles(filter);
 				if (sub.isDirectory() && files.length != 0) {
@@ -203,14 +219,16 @@ public class FileCommands {
 					i = -1;
 				} else if (!hasNext) {
 					do {
+						if (linkedList[ROOT_ARRAY] == null)
+							break;
 						linkedList = (Object[]) linkedList[ROOT_ARRAY];
-						if (linkedList == null)
-							return;
 						i = (int) linkedList[ARRAY_INDEX];
 						hasNext = i + 1 < ((File[]) linkedList[ARRAY]).length;
 					} while (!hasNext);
 				}
 			}
+			if(currQueue>0)
+				ExternalConsole.println(build.deleteCharAt(build.length()-1).toString());
 		}
 
 		@Override
@@ -236,7 +254,7 @@ public class FileCommands {
 					break;
 				}
 			} catch (Exception e) {
-				ExternalConsole.println(e);
+				ExternalConsole.println(e.getMessage());
 				return 1;
 			}
 			return 0;
