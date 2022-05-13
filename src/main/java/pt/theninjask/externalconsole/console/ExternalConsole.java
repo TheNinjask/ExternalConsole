@@ -54,6 +54,13 @@ import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 
+import net.engio.mbassy.bus.MBassador;
+import net.engio.mbassy.bus.config.BusConfiguration;
+import net.engio.mbassy.bus.config.Feature;
+import net.engio.mbassy.bus.config.IBusConfiguration;
+import net.engio.mbassy.bus.error.IPublicationErrorHandler;
+import net.engio.mbassy.bus.error.PublicationError;
+import net.engio.mbassy.listener.Handler;
 import pt.theninjask.externalconsole.additionalCommands.FileCommands;
 import pt.theninjask.externalconsole.event.AfterCommandExecutionExternalConsole;
 import pt.theninjask.externalconsole.event.Event;
@@ -67,13 +74,6 @@ import pt.theninjask.externalconsole.stream.RedirectorOutputStream;
 import pt.theninjask.externalconsole.util.ColorTheme;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
 import pt.theninjask.externalconsole.util.WrapEditorKit;
-import net.engio.mbassy.bus.MBassador;
-import net.engio.mbassy.bus.config.BusConfiguration;
-import net.engio.mbassy.bus.config.Feature;
-import net.engio.mbassy.bus.config.IBusConfiguration;
-import net.engio.mbassy.bus.error.IPublicationErrorHandler;
-import net.engio.mbassy.bus.error.PublicationError;
-import net.engio.mbassy.listener.Handler;
 
 public class ExternalConsole extends JFrame {
 
@@ -88,6 +88,8 @@ public class ExternalConsole extends JFrame {
 	public static final ColorTheme NIGHT_THEME = new ColorTheme("Night", Color.WHITE, Color.BLACK);
 
 	public static final ColorTheme DAY_THEME = new ColorTheme("Day", Color.BLACK, Color.WHITE);
+
+	private static int LINE_LIMIT = 493;
 
 	private JScrollPane scroll;
 	private JTextPane console;
@@ -476,29 +478,62 @@ public class ExternalConsole extends JFrame {
 		}
 	};
 
-	/*private static ExternalConsoleCommand tinker = new ExternalConsoleCommand() {
+	private static ExternalConsoleCommand timer = new ExternalConsoleCommand() {
 
 		@Override
 		public String getCommand() {
-			return "tinker";
+			return "timer";
 		}
 
 		@Override
 		public String getDescription() {
-			return "For test purposes";
+			return "This times how long a command takes";
 		}
 
 		@Override
 		public int executeCommand(String... args) {
-			try {
-				Thread.sleep(Integer.valueOf(args.length > 0? args[0]: "10") * 1000);
-				System.out.println("Done");
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+			if (args.length == 0) {
+				println("Please provide the name of the command (and optionally its args)");
+				return -1;
 			}
-			return 0;
+			String cmdName = args[0];
+			if (ExternalConsole.getCommand(cmdName) == null) {
+				println("Command either not found or not accessible in code");
+				return -1;
+			}
+			String[] cmdArgs = Arrays.copyOfRange(args, 1, args.length);
+			long start = System.nanoTime();
+			ExternalConsole.executeCommand(cmdName, cmdArgs);
+			long stop = System.nanoTime();
+			long time = stop - start;
+			println(String.format("Time taken: %s nanoseconds", time));
+			time = time/1000000000;
+			if(time>0)
+				println(String.format("Time taken: %s seconds", time));
+			time = time/60;
+			if(time>0)
+				println(String.format("Time taken: %s minutes", time));
+			return Long.valueOf(stop-start).intValue();
 		}
-	};*/
+
+		@Override
+		public boolean accessibleInCode() {
+			return true;
+		}
+	};
+
+	/*
+	 * private static ExternalConsoleCommand tinker = new ExternalConsoleCommand() {
+	 * 
+	 * @Override public String getCommand() { return "tinker"; }
+	 * 
+	 * @Override public String getDescription() { return "For test purposes"; }
+	 * 
+	 * @Override public int executeCommand(String... args) { try {
+	 * Thread.sleep(Integer.valueOf(args.length > 0? args[0]: "10") * 1000);
+	 * System.out.println("Done"); } catch (InterruptedException e) {
+	 * e.printStackTrace(); } return 0; } };
+	 */
 
 	private static class UsedCommand {
 
@@ -586,11 +621,12 @@ public class ExternalConsole extends JFrame {
 		this.cmds.put(top.getCommand(), top);
 		this.cmds.put(theme.getCommand(), theme);
 		this.cmds.put(forceStop.getCommand(), forceStop);
+		this.cmds.put(timer.getCommand(), timer);
 		for (ExternalConsoleCommand cmd : FileCommands.getCommands()) {
 			this.cmds.put(cmd.getCommand(), cmd);
 		}
 
-		//this.cmds.put(tinker.getCommand(), tinker);
+		// this.cmds.put(tinker.getCommand(), tinker);
 
 		this.last = UsedCommand.NULL_UC;
 
@@ -935,6 +971,8 @@ public class ExternalConsole extends JFrame {
 				doc.insertString(doc.getLength(), Character.toString(b), null);
 				if (autoScroll)
 					console.setCaretPosition(doc.getLength());
+				if (b == '\n')
+					clearExtraLines();
 				singleton.scroll.repaint();
 				singleton.scroll.revalidate();
 			} catch (BadLocationException e) {
@@ -1006,17 +1044,15 @@ public class ExternalConsole extends JFrame {
 	}
 
 	public static void println() {
-		try {
-			StyledDocument doc = singleton.console.getStyledDocument();
-			doc.insertString(doc.getLength(), "\n", null);
-			if (singleton.autoScroll)
-				singleton.console.setCaretPosition(doc.getLength());
-			// singleton.console.append("\n");
-			singleton.scroll.repaint();
-			singleton.scroll.revalidate();
-		} catch (BadLocationException e) {
-			e.printStackTrace();
-		}
+		println("");
+		/*
+		 * try { StyledDocument doc = singleton.console.getStyledDocument();
+		 * doc.insertString(doc.getLength(), "\n", null); if (singleton.autoScroll)
+		 * singleton.console.setCaretPosition(doc.getLength()); //
+		 * singleton.console.append("\n"); singleton.scroll.repaint();
+		 * singleton.scroll.revalidate(); } catch (BadLocationException e) {
+		 * e.printStackTrace(); }
+		 */
 	}
 
 	public static void println(Object msg) {
@@ -1030,10 +1066,20 @@ public class ExternalConsole extends JFrame {
 			if (singleton.autoScroll)
 				singleton.console.setCaretPosition(doc.getLength());
 			// singleton.console.append(String.format("%s\n", msg));
+			clearExtraLines();
 			singleton.scroll.repaint();
 			singleton.scroll.revalidate();
 		} catch (BadLocationException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private static void clearExtraLines() throws BadLocationException {
+		StyledDocument doc = singleton.console.getStyledDocument();
+		String text = doc.getText(0, doc.getLength());
+		long lines = text.chars().filter(c -> c == '\n').count();
+		for (; lines > LINE_LIMIT; lines--) {
+			doc.remove(0, doc.getText(0, doc.getLength()).indexOf('\n') + 1);
 		}
 	}
 
@@ -1096,12 +1142,12 @@ public class ExternalConsole extends JFrame {
 
 	private static final String[] loading1 = { "|", "/", "-", "\\" };
 	private static final String[] loading2 = { ".", "..", "...", "....", ".....", "....", "...", ".." };
-	private static final String[] loading3 = { "|.         |", "| .        |", "|  .       |", "|   .      |", "|    .     |",
-			"|     .    |", "|      .   |", "|       .  |", "|        . |", "|         .|", "|        . |",
-			"|       .  |", "|      .   |", "|     .    |", "|    .     |", "|   .      |", "|  .       |",
-			"| .        |" };
-	//private static String[] loading4 = {"^",">","v","<"};
-	private static final String[][] loadings = {loading1, loading2, loading3 };
+	private static final String[] loading3 = { "|.         |", "| .        |", "|  .       |", "|   .      |",
+			"|    .     |", "|     .    |", "|      .   |", "|       .  |", "|        . |", "|         .|",
+			"|        . |", "|       .  |", "|      .   |", "|     .    |", "|    .     |", "|   .      |",
+			"|  .       |", "| .        |" };
+	// private static String[] loading4 = {"^",">","v","<"};
+	private static final String[][] loadings = { loading1, loading2, loading3 };
 
 	@Handler
 	public void onCommand(InputCommandExternalConsoleEvent event) {
