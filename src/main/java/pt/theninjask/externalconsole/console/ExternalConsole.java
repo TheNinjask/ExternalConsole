@@ -507,13 +507,13 @@ public class ExternalConsole extends JFrame {
 			long stop = System.nanoTime();
 			long time = stop - start;
 			println(String.format("Time taken: %s nanoseconds", time));
-			time = time/1000000000;
-			if(time>0)
+			time = time / 1000000000;
+			if (time > 0)
 				println(String.format("Time taken: %s seconds", time));
-			time = time/60;
-			if(time>0)
+			time = time / 60;
+			if (time > 0)
 				println(String.format("Time taken: %s minutes", time));
-			return Long.valueOf(stop-start).intValue();
+			return Long.valueOf(stop - start).intValue();
 		}
 
 		@Override
@@ -521,6 +521,30 @@ public class ExternalConsole extends JFrame {
 			return true;
 		}
 	};
+
+	/*
+	 * private static ExternalConsoleCommand nano = new ExternalConsoleCommand() {
+	 * 
+	 * @Override public String getCommand() { return "nano"; }
+	 * 
+	 * @Override public String getDescription() { return "Text Editor"; }
+	 * 
+	 * @Override public int executeCommand(String... args) { if (args.length == 0) {
+	 * println("Please provide the name of the command (and optionally its args)");
+	 * return -1; } String cmdName = args[0]; if
+	 * (ExternalConsole.getCommand(cmdName) == null) {
+	 * println("Command either not found or not accessible in code"); return -1; }
+	 * String[] cmdArgs = Arrays.copyOfRange(args, 1, args.length); long start =
+	 * System.nanoTime(); ExternalConsole.executeCommand(cmdName, cmdArgs); long
+	 * stop = System.nanoTime(); long time = stop - start;
+	 * println(String.format("Time taken: %s nanoseconds", time)); time =
+	 * time/1000000000; if(time>0) println(String.format("Time taken: %s seconds",
+	 * time)); time = time/60; if(time>0)
+	 * println(String.format("Time taken: %s minutes", time)); return
+	 * Long.valueOf(stop-start).intValue(); }
+	 * 
+	 * };
+	 */
 
 	/*
 	 * private static ExternalConsoleCommand tinker = new ExternalConsoleCommand() {
@@ -1140,14 +1164,40 @@ public class ExternalConsole extends JFrame {
 
 	}
 
-	private static final String[] loading1 = { "|", "/", "-", "\\" };
-	private static final String[] loading2 = { ".", "..", "...", "....", ".....", "....", "...", ".." };
-	private static final String[] loading3 = { "|.         |", "| .        |", "|  .       |", "|   .      |",
-			"|    .     |", "|     .    |", "|      .   |", "|       .  |", "|        . |", "|         .|",
-			"|        . |", "|       .  |", "|      .   |", "|     .    |", "|    .     |", "|   .      |",
-			"|  .       |", "| .        |" };
+	private static final LoadingProcess loop = (i, loading) ->{
+		return ++i == loading.length ? 3 : i;
+	};
+	
+	private static final LoadingProcess fandb = (i, loading) ->{
+		if(loading.length==4) // in case it has only 1...
+			return 3;
+		if((int)loading[2]==0b0) {
+			i++;
+			if (i == loading.length) {
+				i -= 2;
+				loading[2] = 0b1;
+			}
+		}else{
+			i--;
+			if (i == 2) {
+				i += 2;
+				loading[2] = 0b0;
+			}
+		}
+		return i;
+	};
+	/*
+	 * [0] = index manip function
+	 * [1] = time in nano until next index
+	 * [2] = for any extra data for index manip function
+	 */
+	private static final Object[] loading1 = { loop, 100, 0, "|", "/", "-", "\\" };
+	private static final Object[] loading2 = { fandb, 100, 0b0, ".", "..", "...", "....", "....." };
+	private static final Object[] loading3 = { fandb, 100, 0b0, "|.         |", "| .        |", "|  .       |",
+			"|   .      |", "|    .     |", "|     .    |", "|      .   |", "|       .  |", "|        . |",
+			"|         .|" };
 	// private static String[] loading4 = {"^",">","v","<"};
-	private static final String[][] loadings = { loading1, loading2, loading3 };
+	private static final Object[][] loadings = { loading1, loading2, loading3 };
 
 	@Handler
 	public void onCommand(InputCommandExternalConsoleEvent event) {
@@ -1168,12 +1218,12 @@ public class ExternalConsole extends JFrame {
 				});
 				proc.start();
 				proc.join(5 * 1000);
-				int i = 0;
-				String[] loading = loadings[ThreadLocalRandom.current().nextInt(loadings.length)];
+				int i = 3;
+				Object[] loading = loadings[ThreadLocalRandom.current().nextInt(loadings.length)];
 				while (proc.isAlive()) {
 					input.setText(String.format("Processing %s", loading[i]));
-					proc.join(100);
-					i = ++i == loading.length ? 0 : i;
+					proc.join((int) loading[1]);
+					i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
 				}
 				input.setText("");
 				input.setEditable(true);
