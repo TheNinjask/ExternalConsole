@@ -1,4 +1,4 @@
-package pt.theninjask.externalconsole.additionalCommands;
+package pt.theninjask.externalconsole.console.additionalCommands;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -368,7 +368,13 @@ public class FileCommands {
 
 	};
 
-	public static ExternalConsoleCommand[] getCommands() {
+	public static void addCommands(ExternalConsole console) {
+		for (ExternalConsoleCommand cmd : getCommands()) {
+			console.internalAddCommand(cmd);
+		}
+	}
+	
+	private static ExternalConsoleCommand[] getCommands() {
 		return new ExternalConsoleCommand[] { ls, cd, tree, mkdir };
 	}
 

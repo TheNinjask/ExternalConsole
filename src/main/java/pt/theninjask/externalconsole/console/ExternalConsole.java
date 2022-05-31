@@ -30,6 +30,7 @@ import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
@@ -61,7 +62,7 @@ import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.bus.error.IPublicationErrorHandler;
 import net.engio.mbassy.bus.error.PublicationError;
 import net.engio.mbassy.listener.Handler;
-import pt.theninjask.externalconsole.additionalCommands.FileCommands;
+import pt.theninjask.externalconsole.console.additionalCommands.FileCommands;
 import pt.theninjask.externalconsole.event.AfterCommandExecutionExternalConsole;
 import pt.theninjask.externalconsole.event.Event;
 import pt.theninjask.externalconsole.event.ExternalConsoleClosingEvent;
@@ -433,17 +434,14 @@ public class ExternalConsole extends JFrame {
 				case 1:
 					return new String[] { "name" };
 				case 2:
-					return new String[] { "0", "127", "255" };
 				case 3:
-					return new String[] { "0", "127", "255" };
 				case 4:
-					return new String[] { "0", "127", "255" };
 				case 5:
-					return new String[] { "0", "127", "255" };
 				case 6:
-					return new String[] { "0", "127", "255" };
 				case 7:
-					return new String[] { "0", "127", "255" };
+					return IntStream.range(0, 255).mapToObj(i -> {
+						return Integer.toString(i);
+					}).toArray(String[]::new);
 				default:
 					return null;
 				}
@@ -520,6 +518,85 @@ public class ExternalConsole extends JFrame {
 		public boolean accessibleInCode() {
 			return true;
 		}
+	};
+
+	private static ExternalConsoleCommand loadAnim = new ExternalConsoleCommand() {
+
+		@Override
+		public String getCommand() {
+			return "load_anim";
+		}
+
+		@Override
+		public String getDescription() {
+			return "Shows an animation for a certain time (default: 5s)";
+		}
+
+		@Override
+		public int executeCommand(String... args) {
+			int animation = -1;
+			switch (args.length) {
+			default:
+			case 1:
+				if (args.length > 0)
+					try {
+						animation = Integer.valueOf(args[0]);
+					} catch (NumberFormatException e) {
+					}
+			case 0:
+				break;
+			}
+			try {
+				Thread proc = new Thread(() -> {
+					try {
+						int animTime = 5;
+						if (args.length > 1)
+							try {
+								animTime = Integer.valueOf(args[1]);
+							} catch (NumberFormatException e) {
+							}
+						Thread.sleep(animTime*1000);
+					} catch (InterruptedException e) {
+					}
+				});
+				proc.start();
+				animation = animation < 0 || animation >= loadings.length
+						? ThreadLocalRandom.current().nextInt(loadings.length)
+						: animation;
+				Object[] loading = loadings[animation];
+				int i = 3;
+				StyledDocument doc = singleton.console.getStyledDocument();
+				int offset = doc.getLength();
+				while (proc.isAlive()) {
+					String msg = String.format("Processing %s", loading[i]);
+					doc.insertString(offset, msg, null);
+					proc.join((int) loading[1]);
+					i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
+					doc.remove(offset, msg.length());
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				return -1;
+			}
+			return 0;
+		}
+
+		@Override
+		public String[] getParamOptions(int number, String[] currArgs) {
+			switch (number) {
+			case 1:
+				return IntStream.range(0, 15).mapToObj(i -> {
+					return Integer.toString(i);
+				}).toArray(String[]::new);
+			case 0:
+				return IntStream.range(0, loadings.length).mapToObj(i -> {
+					return Integer.toString(i);
+				}).toArray(String[]::new);
+			default:
+				return null;
+			}
+		}
+
 	};
 
 	/*
@@ -638,17 +715,16 @@ public class ExternalConsole extends JFrame {
 		this.autoScroll = true;
 		this.cmds = new HashMap<>();
 
-		this.cmds.put(help.getCommand(), help);
-		this.cmds.put(autoscroll.getCommand(), autoscroll);
-		this.cmds.put(clear.getCommand(), clear);
-		this.cmds.put(hide.getCommand(), hide);
-		this.cmds.put(top.getCommand(), top);
-		this.cmds.put(theme.getCommand(), theme);
-		this.cmds.put(forceStop.getCommand(), forceStop);
-		this.cmds.put(timer.getCommand(), timer);
-		for (ExternalConsoleCommand cmd : FileCommands.getCommands()) {
-			this.cmds.put(cmd.getCommand(), cmd);
-		}
+		internalAddCommand(help);
+		internalAddCommand(autoscroll);
+		internalAddCommand(clear);
+		internalAddCommand(hide);
+		internalAddCommand(top);
+		internalAddCommand(theme);
+		internalAddCommand(forceStop);
+		internalAddCommand(timer);
+		internalAddCommand(loadAnim);
+		FileCommands.addCommands(this);
 
 		// this.cmds.put(tinker.getCommand(), tinker);
 
@@ -706,8 +782,12 @@ public class ExternalConsole extends JFrame {
 			singleton.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 	}
 
+	public void internalAddCommand(ExternalConsoleCommand newCmd) {
+		cmds.put(newCmd.getCommand(), newCmd);
+	}
+	
 	public static void addCommand(ExternalConsoleCommand newCmd) {
-		singleton.cmds.put(newCmd.getCommand(), newCmd);
+		singleton.internalAddCommand(newCmd);
 	}
 
 	public static void removeCommand(String cmd) {
@@ -1164,22 +1244,22 @@ public class ExternalConsole extends JFrame {
 
 	}
 
-	private static final LoadingProcess loop = (i, loading) ->{
+	private static final LoadingProcess loop = (i, loading) -> {
 		return ++i == loading.length ? 3 : i;
 	};
-	
-	private static final LoadingProcess fandb = (i, loading) ->{
-		if(loading.length==4) // in case it has only 1...
+
+	private static final LoadingProcess fandb = (i, loading) -> {
+		if (loading.length == 4) // in case it has only 1...
 			return 3;
-		if((int)loading[2]==0b0) {
+		if ((int) loading[2] == 0b0) {
 			i++;
-			if (i == loading.length) {
+			if (i >= loading.length) {
 				i -= 2;
 				loading[2] = 0b1;
 			}
-		}else{
+		} else {
 			i--;
-			if (i == 2) {
+			if (i <= 2) {
 				i += 2;
 				loading[2] = 0b0;
 			}
@@ -1188,16 +1268,20 @@ public class ExternalConsole extends JFrame {
 	};
 	/*
 	 * [0] = index manip function
-	 * [1] = time in nano until next index
+	 * [1] = time in millis until next index
 	 * [2] = for any extra data for index manip function
+	 * [3] = initial position for printing
+	 * [4+] = unknown but intended for other printing strings
 	 */
 	private static final Object[] loading1 = { loop, 100, 0, "|", "/", "-", "\\" };
 	private static final Object[] loading2 = { fandb, 100, 0b0, ".", "..", "...", "....", "....." };
 	private static final Object[] loading3 = { fandb, 100, 0b0, "|.         |", "| .        |", "|  .       |",
 			"|   .      |", "|    .     |", "|     .    |", "|      .   |", "|       .  |", "|        . |",
 			"|         .|" };
-	// private static String[] loading4 = {"^",">","v","<"};
-	private static final Object[][] loadings = { loading1, loading2, loading3 };
+	private static final Object[] loading4 = { loop, 100, 0, ">           <", ">-         -<", "> -       - <",
+			">  -     -  <", ">   -   -   <", ">    - -    <", ">     *     <" };
+
+	private static final Object[][] loadings = { loading1, loading2, loading3, loading4 };
 
 	@Handler
 	public void onCommand(InputCommandExternalConsoleEvent event) {
@@ -1205,6 +1289,7 @@ public class ExternalConsole extends JFrame {
 		new Thread(() -> {
 			try {
 				input.setEditable(false);
+				input.setEnabled(false);
 				Thread proc = new Thread(() -> {
 					if (event.getArgs() == null || event.getArgs().length == 0 || event.isCancelled())
 						return;
@@ -1218,8 +1303,8 @@ public class ExternalConsole extends JFrame {
 				});
 				proc.start();
 				proc.join(5 * 1000);
-				int i = 3;
 				Object[] loading = loadings[ThreadLocalRandom.current().nextInt(loadings.length)];
+				int i = 3;
 				while (proc.isAlive()) {
 					input.setText(String.format("Processing %s", loading[i]));
 					proc.join((int) loading[1]);
@@ -1227,10 +1312,13 @@ public class ExternalConsole extends JFrame {
 				}
 				input.setText("");
 				input.setEditable(true);
+				input.setEnabled(true);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 				input.setEnabled(true);
+				input.setEditable(true);
 			}
+			input.requestFocusInWindow();
 			// });
 		}).start();
 	}
