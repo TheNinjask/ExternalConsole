@@ -143,34 +143,29 @@ public class ExternalConsole extends JFrame {
 		Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
 		List<Class<? extends ExternalConsoleCommand>> cmds = reflections.getSubTypesOf(ExternalConsoleCommand.class)
 				.stream().toList();
-		List<LoadingExternalConsoleCommand> op = Arrays.asList(
-				(clazz)->{
-					try {
-						return clazz.getDeclaredConstructor(ExternalConsole.class).newInstance(this);
-					} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
-						return null;
-					}
-				},
-				(clazz)->{
-					try {
-						return clazz.getDeclaredConstructor().newInstance();
-					} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
-						return null;
-					}
-				}
-				);
-		try {
-			for (Class<? extends ExternalConsoleCommand> cmd : cmds) {
-				for (LoadingExternalConsoleCommand loadingExternalConsoleCommand : op) {
-					ExternalConsoleCommand load = loadingExternalConsoleCommand.getCommand(cmd);
-					if(load!=null) {
-						_addCommand(load);
-						break;
-					}
-				}				
+		List<LoadingExternalConsoleCommand> op = Arrays.asList((clazz) -> {
+			try {
+				return clazz.getDeclaredConstructor(ExternalConsole.class).newInstance(this);
+			} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | SecurityException e) {
+				return null;
 			}
-		} catch (IllegalArgumentException | SecurityException e) {
-			e.printStackTrace();
+		}, (clazz) -> {
+			try {
+				return clazz.getDeclaredConstructor().newInstance();
+			} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException | SecurityException e) {
+				return null;
+			}
+		});
+		for (Class<? extends ExternalConsoleCommand> cmd : cmds) {
+			for (LoadingExternalConsoleCommand loadingExternalConsoleCommand : op) {
+				ExternalConsoleCommand load = loadingExternalConsoleCommand.getCommand(cmd);
+				if (load != null) {
+					_addCommand(load);
+					break;
+				}
+			}
 		}
 
 		// this.cmds.put(tinker.getCommand(), tinker);
@@ -198,26 +193,22 @@ public class ExternalConsole extends JFrame {
 		EventManager.registerEventListener(this);
 	}
 
-	/*
-	 * public static ExternalConsole getInstance() { return singleton; }
-	 */
-
 	public boolean _getAutoScroll() {
 		return autoScroll;
 	}
-	
+
 	public void _setAutoScroll(boolean autoscroll) {
 		this.autoScroll = autoscroll;
 	}
-	
+
 	public JTextPane _getConsole() {
 		return console;
 	}
-	
+
 	public JScrollPane _getScroll() {
 		return scroll;
 	}
-	
+
 	public static boolean isViewable() {
 		return singleton.isVisible();
 	}
@@ -596,19 +587,19 @@ public class ExternalConsole extends JFrame {
 		RedirectorErrorOutputStream.changeRedirectToDefault();
 		RedirectorInputStream.changeRedirectToDefault();
 	}
-	
+
 	public OutputStream _getOutputStream() {
 		return out;
 	}
-	
+
 	public OutputStream _getErrorOutputStream() {
 		return err;
 	}
-	
+
 	public InputStream _getInputStream() {
 		return in;
 	}
-	
+
 	public static void enableEventManagerLogging(boolean val) {
 		EventManager.enableLogging(val);
 	}
@@ -675,10 +666,10 @@ public class ExternalConsole extends JFrame {
 
 	private static final Object[][] loadings = { loading1, loading2, loading3, loading4 };
 
-	public Object[][] _getLoadings(){
+	public Object[][] _getLoadings() {
 		return loadings;
 	}
-	
+
 	private static AtomicBoolean isProgramRunning = new AtomicBoolean();
 
 	private static ExternalConsoleCommand program = null;
@@ -814,7 +805,7 @@ public class ExternalConsole extends JFrame {
 	}
 
 	public static void main(String[] args) {
-		if(isTinkeringDisabled())
+		if (isTinkeringDisabled())
 			return;
 		setSystemStreams();
 		registerEventListener(new Object() {
