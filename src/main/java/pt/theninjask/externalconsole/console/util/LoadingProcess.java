@@ -1,4 +1,4 @@
-package pt.theninjask.externalconsole.console;
+package pt.theninjask.externalconsole.console.util;
 
 public interface LoadingProcess {
 

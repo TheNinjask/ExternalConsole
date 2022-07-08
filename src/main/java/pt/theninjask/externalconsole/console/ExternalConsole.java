@@ -11,10 +11,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -22,15 +21,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import java.util.logging.StreamHandler;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.swing.BorderFactory;
@@ -42,18 +39,9 @@ import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultCaret;
-import javax.swing.text.SimpleAttributeSet;
-import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionGroup;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.reflections.Reflections;
 
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.config.BusConfiguration;
@@ -62,7 +50,13 @@ import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.bus.error.IPublicationErrorHandler;
 import net.engio.mbassy.bus.error.PublicationError;
 import net.engio.mbassy.listener.Handler;
-import pt.theninjask.externalconsole.console.additionalCommands.FileCommands;
+import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
+import pt.theninjask.externalconsole.console.command.TimerCommand;
+import pt.theninjask.externalconsole.console.util.LoadingProcess;
+import pt.theninjask.externalconsole.console.util.UsedCommand;
+import pt.theninjask.externalconsole.console.util.stream.ExternalConsoleErrorOutputStream;
+import pt.theninjask.externalconsole.console.util.stream.ExternalConsoleInputStream;
+import pt.theninjask.externalconsole.console.util.stream.ExternalConsoleOutputStream;
 import pt.theninjask.externalconsole.event.AfterCommandExecutionExternalConsole;
 import pt.theninjask.externalconsole.event.Event;
 import pt.theninjask.externalconsole.event.ExternalConsoleClosingEvent;
@@ -75,6 +69,8 @@ import pt.theninjask.externalconsole.stream.RedirectorOutputStream;
 import pt.theninjask.externalconsole.util.ColorTheme;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
 import pt.theninjask.externalconsole.util.WrapEditorKit;
+
+import static pt.theninjask.externalconsole.console.command.TinkerCommand.isTinkeringDisabled;
 
 public class ExternalConsole extends JFrame {
 
@@ -108,577 +104,6 @@ public class ExternalConsole extends JFrame {
 
 	private ColorTheme currentTheme;
 
-	private static ExternalConsoleCommand help = new ExternalConsoleCommand() {
-
-		@Override
-		public String getCommand() {
-			return "help";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Shows all commands and their descriptions";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			println("Available Commands:");
-			List<ExternalConsoleCommand> helpSorted = singleton.cmds.values().stream()
-					.sorted(ExternalConsoleCommand.comparator).toList();
-			for (ExternalConsoleCommand cmd : helpSorted) {
-				// int spacing = 4 + cmd.getCommand().length();
-				println(String.format("\t%s - %s", cmd.getCommand(),
-						// cmd.getDescription().replaceAll("\n", "\n\t" + " ".repeat(spacing))));
-						cmd.getDescription().replaceAll("\n", "\n\t\t")));
-			}
-			return 0;
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand autoscroll = new ExternalConsoleCommand() {
-
-		private Map<Option, Runnable> optionsMap = Map
-				.ofEntries(Map.entry(new Option("a", "auto", false, "Sets Scroll to Auto"), () -> {
-					ExternalConsole.singleton.autoScroll = true;
-				}), Map.entry(new Option("m", "manual", false, "Sets Scroll to Manual"), () -> {
-					ExternalConsole.singleton.autoScroll = false;
-				}));
-
-		@Override
-		public String getCommand() {
-			return "autoscroll";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Enables/Disables autoscrolling of ExternalConsole";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			Options options = new Options();
-			OptionGroup scroll = new OptionGroup();
-			// scroll.setRequired(true);
-			optionsMap.keySet().forEach(o -> scroll.addOption(o));
-			options.addOptionGroup(scroll);
-			try {
-				CommandLineParser parser = new DefaultParser();
-				CommandLine cmd = parser.parse(options, args);
-				boolean succ = optionsMap.entrySet().parallelStream().filter(e -> {
-					if (cmd.hasOption(e.getKey().getOpt())) {
-						e.getValue().run();
-						return true;
-					} else {
-						return false;
-					}
-				}).count() > 0;
-				if (!succ) {
-					println(String.format("autoscroll is set as: %s", singleton.autoScroll));
-					new HelpFormatter().printHelp(new PrintWriter(singleton.out, true), HelpFormatter.DEFAULT_WIDTH,
-							"autoscroll", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD,
-							null, true);
-				}
-
-			} catch (ParseException e) {
-				println(e.getMessage());
-				return 1;
-			}
-			return 0;
-		}
-
-		@Override
-		public String[] getParamOptions(int number, String[] currArgs) {
-			switch (number) {
-			case 0:
-				return optionsMap.keySet().stream().map(o -> {
-					return String.format("--%s", o.getLongOpt());
-				}).toList().toArray(new String[optionsMap.size()]);
-			default:
-				return null;
-			}
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand clear = new ExternalConsoleCommand() {
-
-		@Override
-		public String getCommand() {
-			return "cls";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Clears ExternalConsole";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			singleton.console.setText("");
-			return 0;
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand hide = new ExternalConsoleCommand() {
-
-		@Override
-		public String getCommand() {
-			return "hide";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Hides External Console";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			singleton.setExtendedState(JFrame.ICONIFIED);
-			return 0;
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand top = new ExternalConsoleCommand() {
-
-		private Map<Option, Runnable> optionsMap = Map
-				.ofEntries(Map.entry(new Option("t", "true", false, "AlwaysOnTop Set to True"), () -> {
-					ExternalConsole.singleton.setAlwaysOnTop(true);
-				}), Map.entry(new Option("f", "false", false, "AlwaysOnTop Set to False"), () -> {
-					ExternalConsole.singleton.setAlwaysOnTop(false);
-				}));
-
-		@Override
-		public String getCommand() {
-			return "top";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Flag for ExternalConsole be always on top";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			Options options = new Options();
-			OptionGroup top = new OptionGroup();
-			optionsMap.keySet().forEach(o -> top.addOption(o));
-			options.addOptionGroup(top);
-			try {
-				CommandLineParser parser = new DefaultParser();
-				CommandLine cmd = parser.parse(options, args);
-				boolean succ = optionsMap.entrySet().parallelStream().filter(e -> {
-					if (cmd.hasOption(e.getKey().getOpt())) {
-						e.getValue().run();
-						return true;
-					} else {
-						return false;
-					}
-				}).count() > 0;
-				if (!succ) {
-					println(String.format("AlwaysOnTop is set as: %s", singleton.isAlwaysOnTop()));
-					new HelpFormatter().printHelp(new PrintWriter(singleton.out, true), HelpFormatter.DEFAULT_WIDTH,
-							"top", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, null,
-							true);
-				}
-			} catch (ParseException e) {
-				println(e.getMessage());
-				return 1;
-			}
-			return 0;
-		}
-
-		@Override
-		public String[] getParamOptions(int number, String[] currArgs) {
-			switch (number) {
-			case 0:
-				return optionsMap.keySet().stream().map(o -> {
-					return String.format("--%s", o.getLongOpt());
-				}).toList().toArray(new String[optionsMap.size()]);
-			default:
-				return null;
-			}
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand theme = new ExternalConsoleCommand() {
-
-		// cheese to allow to pass args
-		private CommandLine cmd;
-
-		private Map<Option, Runnable> optionsMap;
-
-		// To allow to add more themes from outside
-		private Map<String, ColorTheme> themes = new HashMap<>(
-				Map.ofEntries(Map.entry(TWITCH_THEME.getName(), TWITCH_THEME),
-						Map.entry(DAY_THEME.getName(), DAY_THEME), Map.entry(NIGHT_THEME.getName(), NIGHT_THEME)));
-		{
-			Option set = Option.builder("s").longOpt("set").desc("Set a theme to External Console").numberOfArgs(1)
-					.build();
-			Option add = Option.builder("a").longOpt("add").desc("Add a theme to External Console").numberOfArgs(7)
-					.build();
-			optionsMap = Map.ofEntries(Map.entry(set, () -> {
-				ColorTheme theme = themes.get(cmd.getOptionValue(set.getOpt()));
-				if (theme != null)
-					setTheme(theme);
-				else
-					println(String.format("Theme %s does not exist", set.getValue()));
-			}), Map.entry(add, () -> {
-				try {
-					String name = cmd.getOptionValues(add.getOpt())[0];
-					if (themes.containsKey(name)) {
-						println(String.format("Theme with name %s already exists!", name));
-						return;
-					}
-					int rf = Integer.parseInt(cmd.getOptionValues(add.getOpt())[1]);
-					// rf = Integer.min(Integer.max(0,rf),255);
-					int gf = Integer.parseInt(cmd.getOptionValues(add.getOpt())[2]);
-					// gf = Integer.min(Integer.max(0,gf),255);
-					int bf = Integer.parseInt(cmd.getOptionValues(add.getOpt())[3]);
-					// bf = Integer.min(Integer.max(0,bf),255);
-					int rb = Integer.parseInt(cmd.getOptionValues(add.getOpt())[4]);
-					// rb = Integer.min(Integer.max(0,rb),255);
-					int gb = Integer.parseInt(cmd.getOptionValues(add.getOpt())[5]);
-					// gb = Integer.min(Integer.max(0,gb),255);
-					int bb = Integer.parseInt(cmd.getOptionValues(add.getOpt())[6]);
-					// bb = Integer.min(Integer.max(0,bb),255);
-
-					themes.put(name, new ColorTheme(name, new Color(rf, gf, bf), new Color(rb, gb, bb)));
-
-					println(String.format("Theme %s added", name));
-				} catch (Exception e) {
-					println(e.getClass().getSimpleName());
-					println(e.getMessage());
-				}
-			}));
-		}
-
-		@Override
-		public String getCommand() {
-			return "theme";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Changes Theme of console";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			Options options = new Options();
-			OptionGroup theme = new OptionGroup();
-			optionsMap.keySet().forEach(o -> theme.addOption(o));
-			options.addOptionGroup(theme);
-			try {
-				CommandLineParser parser = new DefaultParser();
-				cmd = parser.parse(options, args);
-				Optional<Entry<Option, Runnable>> option = optionsMap.entrySet().stream()
-						.filter(e -> cmd.hasOption(e.getKey().getOpt())).findFirst();
-				if (option.isPresent())
-					option.get().getValue().run();
-				else {
-					String current = "Unknown";
-					if (singleton.currentTheme != null)
-						current = singleton.currentTheme.getName();
-					println(String.format("Theme is set as: %s", current));
-					new HelpFormatter().printHelp(new PrintWriter(singleton.out, true), HelpFormatter.DEFAULT_WIDTH,
-							"theme", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD,
-							null, true);
-				}
-			} catch (ParseException e) {
-				println(e.getMessage());
-				cmd = null;
-				return 1;
-			}
-			cmd = null;
-			return 0;
-		}
-
-		@Override
-		public String[] getParamOptions(int number, String[] currArgs) {
-			if (number == 0)
-				return optionsMap.keySet().stream().map(o -> {
-					return String.format("--%s", o.getLongOpt());
-				}).toList().toArray(new String[optionsMap.size()]);
-
-			switch (currArgs[0]) {
-			case "--set":
-			case "-s":
-				return themes.keySet().toArray(new String[themes.size()]);
-			case "--add":
-			case "-a":
-				switch (number) {
-				case 1:
-					return new String[] { "name" };
-				case 2:
-				case 3:
-				case 4:
-				case 5:
-				case 6:
-				case 7:
-					return IntStream.range(0, 255).mapToObj(i -> {
-						return Integer.toString(i);
-					}).toArray(String[]::new);
-				default:
-					return null;
-				}
-			default:
-				return null;
-			}
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand forceStop = new ExternalConsoleCommand() {
-
-		@Override
-		public String getCommand() {
-			return "forceStop";
-		}
-
-		@Override
-		public String getDescription() {
-			return "It terminates the running JVM";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			singleton.dispose();
-			System.exit(0);
-			return 0;
-		}
-	};
-
-	private static ExternalConsoleCommand timer = new ExternalConsoleCommand() {
-
-		@Override
-		public String getCommand() {
-			return "timer";
-		}
-
-		@Override
-		public String getDescription() {
-			return "This times how long a command takes";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			if (args.length == 0) {
-				println("Please provide the name of the command (and optionally its args)");
-				return -1;
-			}
-			String cmdName = args[0];
-			if (ExternalConsole.getCommand(cmdName) == null) {
-				println("Command either not found or not accessible in code");
-				return -1;
-			}
-			String[] cmdArgs = Arrays.copyOfRange(args, 1, args.length);
-			long start = System.nanoTime();
-			ExternalConsole.executeCommand(cmdName, cmdArgs);
-			long stop = System.nanoTime();
-			long time = stop - start;
-			println(String.format("Time taken: %s nanoseconds", time));
-			time = time / 1000000000;
-			if (time > 0)
-				println(String.format("Time taken: %s seconds", time));
-			time = time / 60;
-			if (time > 0)
-				println(String.format("Time taken: %s minutes", time));
-			return Long.valueOf(stop - start).intValue();
-		}
-
-		@Override
-		public boolean accessibleInCode() {
-			return true;
-		}
-	};
-
-	private static ExternalConsoleCommand loadAnim = new ExternalConsoleCommand() {
-
-		@Override
-		public String getCommand() {
-			return "load_anim";
-		}
-
-		@Override
-		public String getDescription() {
-			return "Shows an animation for a certain time (default: 5s)";
-		}
-
-		@Override
-		public int executeCommand(String... args) {
-			int animation = -1;
-			switch (args.length) {
-			default:
-			case 1:
-				if (args.length > 0)
-					try {
-						animation = Integer.valueOf(args[0]);
-					} catch (NumberFormatException e) {
-					}
-			case 0:
-				break;
-			}
-			try {
-				Thread proc = new Thread(() -> {
-					try {
-						int animTime = 5;
-						if (args.length > 1)
-							try {
-								animTime = Integer.valueOf(args[1]);
-							} catch (NumberFormatException e) {
-							}
-						Thread.sleep(animTime*1000);
-					} catch (InterruptedException e) {
-					}
-				});
-				proc.start();
-				animation = animation < 0 || animation >= loadings.length
-						? ThreadLocalRandom.current().nextInt(loadings.length)
-						: animation;
-				Object[] loading = loadings[animation];
-				int i = 3;
-				StyledDocument doc = singleton.console.getStyledDocument();
-				int offset = doc.getLength();
-				while (proc.isAlive()) {
-					String msg = String.format("Processing %s", loading[i]);
-					doc.insertString(offset, msg, null);
-					proc.join((int) loading[1]);
-					i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
-					doc.remove(offset, msg.length());
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-				return -1;
-			}
-			return 0;
-		}
-
-		@Override
-		public String[] getParamOptions(int number, String[] currArgs) {
-			switch (number) {
-			case 1:
-				return IntStream.range(0, 15).mapToObj(i -> {
-					return Integer.toString(i);
-				}).toArray(String[]::new);
-			case 0:
-				return IntStream.range(0, loadings.length).mapToObj(i -> {
-					return Integer.toString(i);
-				}).toArray(String[]::new);
-			default:
-				return null;
-			}
-		}
-
-	};
-
-	/*
-	 * private static ExternalConsoleCommand nano = new ExternalConsoleCommand() {
-	 * 
-	 * @Override public String getCommand() { return "nano"; }
-	 * 
-	 * @Override public String getDescription() { return "Text Editor"; }
-	 * 
-	 * @Override public int executeCommand(String... args) { if (args.length == 0) {
-	 * println("Please provide the name of the command (and optionally its args)");
-	 * return -1; } String cmdName = args[0]; if
-	 * (ExternalConsole.getCommand(cmdName) == null) {
-	 * println("Command either not found or not accessible in code"); return -1; }
-	 * String[] cmdArgs = Arrays.copyOfRange(args, 1, args.length); long start =
-	 * System.nanoTime(); ExternalConsole.executeCommand(cmdName, cmdArgs); long
-	 * stop = System.nanoTime(); long time = stop - start;
-	 * println(String.format("Time taken: %s nanoseconds", time)); time =
-	 * time/1000000000; if(time>0) println(String.format("Time taken: %s seconds",
-	 * time)); time = time/60; if(time>0)
-	 * println(String.format("Time taken: %s minutes", time)); return
-	 * Long.valueOf(stop-start).intValue(); }
-	 * 
-	 * };
-	 */
-
-	/*
-	 * private static ExternalConsoleCommand tinker = new ExternalConsoleCommand() {
-	 * 
-	 * @Override public String getCommand() { return "tinker"; }
-	 * 
-	 * @Override public String getDescription() { return "For test purposes"; }
-	 * 
-	 * @Override public int executeCommand(String... args) { try {
-	 * Thread.sleep(Integer.valueOf(args.length > 0? args[0]: "10") * 1000);
-	 * System.out.println("Done"); } catch (InterruptedException e) {
-	 * e.printStackTrace(); } return 0; } };
-	 */
-
-	private static class UsedCommand {
-
-		private UsedCommand previous;
-
-		private UsedCommand next;
-
-		private String fullCommand;
-
-		private static final UsedCommand NULL_UC = new UsedCommand();
-
-		private UsedCommand() {
-			this.fullCommand = null;
-			this.previous = this;
-			this.next = this;
-		}
-
-		public UsedCommand(String fullCommand, UsedCommand previous, UsedCommand next) {
-			this.fullCommand = fullCommand;
-			this.previous = previous;
-			this.next = next;
-		}
-
-		public String getFullCommand() {
-			return fullCommand;
-		}
-
-		public UsedCommand getPrevious() {
-			return previous;
-		}
-
-		/*
-		 * public void setPrevious(UsedCommand previous) { this.previous = previous; }
-		 */
-
-		public UsedCommand getNext() {
-			return next;
-		}
-
-		public void setNext(UsedCommand next) {
-			this.next = next;
-		}
-	}
-
 	private UsedCommand last;
 
 	private static ExternalConsole singleton = new ExternalConsole();
@@ -707,24 +132,46 @@ public class ExternalConsole extends JFrame {
 		this.add(insertConsole(), BorderLayout.CENTER);
 		this.add(inputConsole(), BorderLayout.SOUTH);
 		scroll.getParent().setBackground(null);
-		this.out = new ExternalConsoleOutputStream();
-		this.err = new ExternalConsoleErrorOutputStream();
+		this.out = new ExternalConsoleOutputStream(this);
+		this.err = new ExternalConsoleErrorOutputStream(this);
 		this.in = new ExternalConsoleInputStream();
 
 		// this.setAlwaysOnTop(true);
 		this.autoScroll = true;
 		this.cmds = new HashMap<>();
 
-		internalAddCommand(help);
-		internalAddCommand(autoscroll);
-		internalAddCommand(clear);
-		internalAddCommand(hide);
-		internalAddCommand(top);
-		internalAddCommand(theme);
-		internalAddCommand(forceStop);
-		internalAddCommand(timer);
-		internalAddCommand(loadAnim);
-		FileCommands.addCommands(this);
+		Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
+		List<Class<? extends ExternalConsoleCommand>> cmds = reflections.getSubTypesOf(ExternalConsoleCommand.class)
+				.stream().toList();
+		List<LoadingExternalConsoleCommand> op = Arrays.asList(
+				(clazz)->{
+					try {
+						return clazz.getDeclaredConstructor(ExternalConsole.class).newInstance(this);
+					} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
+						return null;
+					}
+				},
+				(clazz)->{
+					try {
+						return clazz.getDeclaredConstructor().newInstance();
+					} catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | SecurityException e) {
+						return null;
+					}
+				}
+				);
+		try {
+			for (Class<? extends ExternalConsoleCommand> cmd : cmds) {
+				for (LoadingExternalConsoleCommand loadingExternalConsoleCommand : op) {
+					ExternalConsoleCommand load = loadingExternalConsoleCommand.getCommand(cmd);
+					if(load!=null) {
+						_addCommand(load);
+						break;
+					}
+				}				
+			}
+		} catch (IllegalArgumentException | SecurityException e) {
+			e.printStackTrace();
+		}
 
 		// this.cmds.put(tinker.getCommand(), tinker);
 
@@ -755,6 +202,22 @@ public class ExternalConsole extends JFrame {
 	 * public static ExternalConsole getInstance() { return singleton; }
 	 */
 
+	public boolean _getAutoScroll() {
+		return autoScroll;
+	}
+	
+	public void _setAutoScroll(boolean autoscroll) {
+		this.autoScroll = autoscroll;
+	}
+	
+	public JTextPane _getConsole() {
+		return console;
+	}
+	
+	public JScrollPane _getScroll() {
+		return scroll;
+	}
+	
 	public static boolean isViewable() {
 		return singleton.isVisible();
 	}
@@ -782,12 +245,12 @@ public class ExternalConsole extends JFrame {
 			singleton.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 	}
 
-	public void internalAddCommand(ExternalConsoleCommand newCmd) {
+	public void _addCommand(ExternalConsoleCommand newCmd) {
 		cmds.put(newCmd.getCommand(), newCmd);
 	}
-	
+
 	public static void addCommand(ExternalConsoleCommand newCmd) {
-		singleton.internalAddCommand(newCmd);
+		singleton._addCommand(newCmd);
 	}
 
 	public static void removeCommand(String cmd) {
@@ -797,6 +260,10 @@ public class ExternalConsole extends JFrame {
 	public static ExternalConsoleCommand getCommand(String cmd) {
 		ExternalConsoleCommand ecmd = singleton.cmds.get(cmd);
 		return ecmd.accessibleInCode() ? ecmd : null;
+	}
+
+	public Map<String, ExternalConsoleCommand> _getAllCommands() {
+		return cmds;
 	}
 
 	public static List<ExternalConsoleCommand> getAllCommands() {
@@ -814,7 +281,7 @@ public class ExternalConsole extends JFrame {
 
 	public static boolean executeCommand(String cmd, String... args) {
 		ExternalConsoleCommand ecmd = singleton.cmds.get(cmd);
-		if (ecmd == null || !ecmd.accessibleInCode())
+		if (ecmd == null || !ecmd.accessibleInCode() || ecmd.isProgram())
 			return false;
 		int result = ecmd.executeCommand(args);
 		EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(ecmd, args, result));
@@ -887,36 +354,36 @@ public class ExternalConsole extends JFrame {
 					break;
 				case KeyEvent.VK_TAB:
 					String[] args = inputToArgs(input.getText(), true);
-					ExternalConsoleCommand cmd = cmds.get(args[0]);
+					ExternalConsoleCommand cmd = isProgramRunning.get() ? program : cmds.get(args[0]);
 					boolean next = !KeyPressedAdapter.isKeyPressed(KeyEvent.VK_SHIFT);
 					if (ref == null) {
 						ref = args[args.length - 1];
 					}
 					String[] currArgs;
-					if (args.length > 2)
+					if (isProgramRunning.get())
+						currArgs = Arrays.copyOf(args, args.length);
+					else if (args.length > 2)
 						currArgs = Arrays.copyOfRange(args, 1, args.length - 1);
 					else
 						currArgs = new String[] {};
-					if (args.length <= 1 || cmd == null || cmd.getParamOptions(args.length - 2, currArgs) == null) {
-						List<ExternalConsoleCommand> options = cmds.values().stream()
-								.filter(c -> c.getCommand().startsWith(ref)).sorted(ExternalConsoleCommand.comparator)
-								.toList();
-						tabPos = next ? tabPos + 1 >= options.size() ? 0 : tabPos + 1
-								: tabPos - 1 < 0 ? options.size() - 1 : tabPos - 1;
-						if (tabPos < 0 || tabPos >= options.size())
-							break;
-						args[args.length - 1] = options.get(tabPos).getCommand();
-						input.setText(argsToInput(args));
+					List<String> options;
+					if (isProgramRunning.get() && cmd != null) {
+						String[] paramOptions = cmd.getParamOptions(args.length - 1, currArgs);
+						options = Stream.of(paramOptions).filter(c -> c.startsWith(ref)).toList();
+					} else if (args.length <= 1 || cmd == null
+							|| cmd.getParamOptions(args.length - 2, currArgs) == null) {
+						options = cmds.values().stream().filter(c -> c.getCommand().startsWith(ref))
+								.sorted(ExternalConsoleCommand.comparator).map(c -> c.getCommand()).toList();
 					} else {
 						String[] paramOptions = cmd.getParamOptions(args.length - 2, currArgs);
-						List<String> options = Stream.of(paramOptions).filter(c -> c.startsWith(ref)).toList();
-						tabPos = next ? tabPos + 1 >= options.size() ? 0 : tabPos + 1
-								: tabPos - 1 < 0 ? options.size() - 1 : tabPos - 1;
-						if (tabPos < 0 || tabPos >= options.size())
-							break;
-						args[args.length - 1] = options.get(tabPos);
-						input.setText(argsToInput(args));
+						options = Stream.of(paramOptions).filter(c -> c.startsWith(ref)).toList();
 					}
+					tabPos = next ? tabPos + 1 >= options.size() ? 0 : tabPos + 1
+							: tabPos - 1 < 0 ? options.size() - 1 : tabPos - 1;
+					if (tabPos < 0 || tabPos >= options.size())
+						break;
+					args[args.length - 1] = options.get(tabPos);
+					input.setText(argsToInput(args));
 					break;
 				case KeyEvent.VK_UP:
 				case KeyEvent.VK_KP_UP:
@@ -954,8 +421,7 @@ public class ExternalConsole extends JFrame {
 
 					scroll.repaint();
 					scroll.revalidate();
-					in.contents = input.getText().getBytes();
-					in.pointer = 0;
+					in.insertData(input.getText().getBytes());
 					input.setText("");
 					// event.finishedEvent();
 					EventManager.triggerEvent(event);
@@ -1055,78 +521,6 @@ public class ExternalConsole extends JFrame {
 		return input.stripTrailing();
 	}
 
-	/*
-	 * public static OutputStream getExternalConsoleOutputStream() { return
-	 * singleton.out; }
-	 * 
-	 * public static OutputStream getExternalConsoleErrorOutputStream() { return
-	 * singleton.err; }
-	 * 
-	 * public static InputStream getExternalConsoleInputStream() { return
-	 * singleton.in; }
-	 */
-
-	private class ExternalConsoleOutputStream extends OutputStream {
-
-		@Override
-		public void write(int b) throws IOException {
-			try {
-				StyledDocument doc = singleton.console.getStyledDocument();
-				doc.insertString(doc.getLength(), Character.toString(b), null);
-				if (autoScroll)
-					console.setCaretPosition(doc.getLength());
-				if (b == '\n')
-					clearExtraLines();
-				singleton.scroll.repaint();
-				singleton.scroll.revalidate();
-			} catch (BadLocationException e) {
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				// continue
-			}
-			/*
-			 * console.append(Character.toString(b)); if (autoScroll) try {
-			 * console.setCaretPosition(console.getLineStartOffset(console.getLineCount() -
-			 * 1)); } catch (BadLocationException e) { } scroll.repaint();
-			 * scroll.revalidate();
-			 */
-		}
-
-	}
-
-	private class ExternalConsoleErrorOutputStream extends OutputStream {
-
-		private SimpleAttributeSet errorSet;
-
-		public ExternalConsoleErrorOutputStream() {
-			errorSet = new SimpleAttributeSet();
-			StyleConstants.setForeground(errorSet, Color.RED);
-		}
-
-		@Override
-		public void write(int b) throws IOException {
-			try {
-				StyledDocument doc = singleton.console.getStyledDocument();
-				doc.insertString(doc.getLength(), Character.toString(b), errorSet);
-				if (autoScroll)
-					console.setCaretPosition(doc.getLength());
-				singleton.scroll.repaint();
-				singleton.scroll.revalidate();
-			} catch (BadLocationException e) {
-				e.printStackTrace();
-			} catch (IllegalArgumentException e) {
-				// continue
-			}
-			/*
-			 * console.append(Character.toString(b)); if (autoScroll) try {
-			 * console.setCaretPosition(console.getLineStartOffset(console.getLineCount() -
-			 * 1)); } catch (BadLocationException e) { } scroll.repaint();
-			 * scroll.revalidate();
-			 */
-		}
-
-	}
-
 	public static void setConsoleTitle(String title) {
 		singleton.setTitle(title);
 	}
@@ -1170,7 +564,7 @@ public class ExternalConsole extends JFrame {
 			if (singleton.autoScroll)
 				singleton.console.setCaretPosition(doc.getLength());
 			// singleton.console.append(String.format("%s\n", msg));
-			clearExtraLines();
+			singleton._clearExtraLines();
 			singleton.scroll.repaint();
 			singleton.scroll.revalidate();
 		} catch (BadLocationException e) {
@@ -1178,7 +572,7 @@ public class ExternalConsole extends JFrame {
 		}
 	}
 
-	private static void clearExtraLines() throws BadLocationException {
+	public void _clearExtraLines() throws BadLocationException {
 		StyledDocument doc = singleton.console.getStyledDocument();
 		String text = doc.getText(0, doc.getLength());
 		long lines = text.chars().filter(c -> c == '\n').count();
@@ -1202,7 +596,19 @@ public class ExternalConsole extends JFrame {
 		RedirectorErrorOutputStream.changeRedirectToDefault();
 		RedirectorInputStream.changeRedirectToDefault();
 	}
-
+	
+	public OutputStream _getOutputStream() {
+		return out;
+	}
+	
+	public OutputStream _getErrorOutputStream() {
+		return err;
+	}
+	
+	public InputStream _getInputStream() {
+		return in;
+	}
+	
 	public static void enableEventManagerLogging(boolean val) {
 		EventManager.enableLogging(val);
 	}
@@ -1226,24 +632,6 @@ public class ExternalConsole extends JFrame {
 	 * singleton.input.setText(""); singleton.input.setEnabled(enable); }
 	 */
 
-	/*
-	 * I dont know if this even has a point
-	 *
-	 */
-	private class ExternalConsoleInputStream extends InputStream {
-
-		private byte[] contents;
-		private int pointer = 0;
-
-		@Override
-		public int read() throws IOException {
-			if (pointer >= contents.length)
-				return -1;
-			return this.contents[pointer++];
-		}
-
-	}
-
 	private static final LoadingProcess loop = (i, loading) -> {
 		return ++i == loading.length ? 3 : i;
 	};
@@ -1266,11 +654,15 @@ public class ExternalConsole extends JFrame {
 		}
 		return i;
 	};
+
+	private static final LoadingProcess ltime = (i, loading) -> {
+		loading[3] = String.format("%ss", (System.nanoTime() - (long) loading[4]) / 1000000000);
+		return i;
+	};
+	private static final Object[] loadingTime = { ltime, 100, 0, "5s", null };
 	/*
-	 * [0] = index manip function
-	 * [1] = time in millis until next index
-	 * [2] = for any extra data for index manip function
-	 * [3] = initial position for printing
+	 * [0] = index manip function [1] = time in millis until next index [2] = for
+	 * any extra data for index manip function [3] = initial position for printing
 	 * [4+] = unknown but intended for other printing strings
 	 */
 	private static final Object[] loading1 = { loop, 100, 0, "|", "/", "-", "\\" };
@@ -1283,42 +675,67 @@ public class ExternalConsole extends JFrame {
 
 	private static final Object[][] loadings = { loading1, loading2, loading3, loading4 };
 
+	public Object[][] _getLoadings(){
+		return loadings;
+	}
+	
+	private static AtomicBoolean isProgramRunning = new AtomicBoolean();
+
+	private static ExternalConsoleCommand program = null;
+
 	@Handler
 	public void onCommand(InputCommandExternalConsoleEvent event) {
+		if (isProgramRunning.get())
+			return;
 		// To not lock weirdly the ExternalConsole
+		in.consumeAll();
 		new Thread(() -> {
 			try {
 				input.setEditable(false);
 				input.setEnabled(false);
-				Thread proc = new Thread(() -> {
-					if (event.getArgs() == null || event.getArgs().length == 0 || event.isCancelled())
+				if (event.getArgs() == null || event.getArgs().length == 0 || event.isCancelled())
+					return;
+				String[] args = Arrays.copyOfRange(event.getArgs(), 1, event.getArgs().length);
+				ExternalConsoleCommand cmd = cmds.get(event.getArgs()[0]);
+				if (cmd == null)
+					return;
+				if (cmd.isProgram()) {
+					if (isProgramRunning.get())
 						return;
-					// event.addAfterEvent(() -> {
-					String[] args = Arrays.copyOfRange(event.getArgs(), 1, event.getArgs().length);
-					ExternalConsoleCommand cmd = cmds.get(event.getArgs()[0]);
-					if (cmd != null) {
-						int result = cmd.executeCommand(args);
-						EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(cmd, args, result));
-					}
+					isProgramRunning.set(true);
+				}
+				Thread proc = new Thread(() -> {
+					program = cmd;
+					int result = cmd.executeCommand(args);
+					if (cmd.isProgram())
+						isProgramRunning.set(false);
+					EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(cmd, args, result));
+					program = null;
 				});
 				proc.start();
-				proc.join(5 * 1000);
+				if (!cmd.isProgram())
+					proc.join(5 * 1000);
 				Object[] loading = loadings[ThreadLocalRandom.current().nextInt(loadings.length)];
+				if (cmd instanceof TimerCommand) {
+					loading = loadingTime;
+					loading[4] = System.nanoTime() - 5000000000L;
+				}
 				int i = 3;
-				while (proc.isAlive()) {
+				while (proc.isAlive() && !isProgramRunning.get()) {
 					input.setText(String.format("Processing %s", loading[i]));
 					proc.join((int) loading[1]);
 					i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
 				}
 				input.setText("");
-				input.setEditable(true);
-				input.setEnabled(true);
+				// input.setEditable(true);
+				// input.setEnabled(true);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
+			} finally {
 				input.setEnabled(true);
 				input.setEditable(true);
+				input.requestFocusInWindow();
 			}
-			input.requestFocusInWindow();
 			// });
 		}).start();
 	}
@@ -1397,10 +814,13 @@ public class ExternalConsole extends JFrame {
 	}
 
 	public static void main(String[] args) {
+		if(isTinkeringDisabled())
+			return;
 		setSystemStreams();
 		registerEventListener(new Object() {
 			@Handler
 			public void onClose(ExternalConsoleClosingEvent event) {
+				singleton.dispose();
 				System.exit(0);
 			}
 		});
