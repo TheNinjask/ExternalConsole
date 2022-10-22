@@ -52,4 +52,13 @@ public interface ExternalConsoleCommand {
 	public default boolean isProgram() {
 		return false;
 	}
+	
+	/**
+	 * If true, it means the command is not intended for use and can be removed
+	 * with ExternalConsole.removeDemoCmds()
+	 * @return
+	 */
+	public default boolean isDemo() {
+		return false;
+	}
 }

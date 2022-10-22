@@ -5,8 +5,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
@@ -17,6 +15,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -38,8 +37,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.DefaultCaret;
-import javax.swing.text.StyledDocument;
 
 import org.reflections.Reflections;
 
@@ -52,6 +49,7 @@ import net.engio.mbassy.bus.error.PublicationError;
 import net.engio.mbassy.listener.Handler;
 import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.TimerCommand;
+import pt.theninjask.externalconsole.console.component.ScreenConsole;
 import pt.theninjask.externalconsole.console.util.LoadingProcess;
 import pt.theninjask.externalconsole.console.util.UsedCommand;
 import pt.theninjask.externalconsole.console.util.stream.ExternalConsoleErrorOutputStream;
@@ -68,9 +66,6 @@ import pt.theninjask.externalconsole.stream.RedirectorInputStream;
 import pt.theninjask.externalconsole.stream.RedirectorOutputStream;
 import pt.theninjask.externalconsole.util.ColorTheme;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
-import pt.theninjask.externalconsole.util.WrapEditorKit;
-
-import static pt.theninjask.externalconsole.console.command.TinkerCommand.isTinkeringDisabled;
 
 public class ExternalConsole extends JFrame {
 
@@ -86,10 +81,6 @@ public class ExternalConsole extends JFrame {
 
 	public static final ColorTheme DAY_THEME = new ColorTheme("Day", Color.BLACK, Color.WHITE);
 
-	private static int LINE_LIMIT = 493;
-
-	private JScrollPane scroll;
-	private JTextPane console;
 	private ExternalConsoleOutputStream out;
 	private ExternalConsoleErrorOutputStream err;
 	private ExternalConsoleInputStream in;
@@ -98,13 +89,13 @@ public class ExternalConsole extends JFrame {
 
 	private JTextField input;
 
-	private boolean autoScroll;
-
 	private Map<String, ExternalConsoleCommand> cmds;
 
 	private ColorTheme currentTheme;
 
 	private UsedCommand last;
+
+	private ScreenConsole screenConsole;
 
 	private static ExternalConsole singleton = new ExternalConsole();
 
@@ -129,15 +120,15 @@ public class ExternalConsole extends JFrame {
 		// ImageIcon icon = new ImageIcon(Constants.ICON_PATH);
 		// this.setIconImage(icon.getImage());
 		this.setLayout(new BorderLayout());
-		this.add(insertConsole(), BorderLayout.CENTER);
+		this.screenConsole = new ScreenConsole();
+		this.add(screenConsole, BorderLayout.CENTER);
 		this.add(inputConsole(), BorderLayout.SOUTH);
-		scroll.getParent().setBackground(null);
+		screenConsole.getParent().setBackground(null);
 		this.out = new ExternalConsoleOutputStream(this);
 		this.err = new ExternalConsoleErrorOutputStream(this);
 		this.in = new ExternalConsoleInputStream();
 
 		// this.setAlwaysOnTop(true);
-		this.autoScroll = true;
 		this.cmds = new HashMap<>();
 
 		Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
@@ -172,7 +163,7 @@ public class ExternalConsole extends JFrame {
 
 		this.last = UsedCommand.NULL_UC;
 
-		this.console.setForeground(currentTheme.getFont());
+		this.screenConsole.getScreen().setForeground(currentTheme.getFont());
 		this.setBackground(currentTheme.getBackground());
 
 		this.input.setBorder(BorderFactory.createLineBorder(currentTheme.getFont(), 1));
@@ -194,19 +185,19 @@ public class ExternalConsole extends JFrame {
 	}
 
 	public boolean _getAutoScroll() {
-		return autoScroll;
+		return screenConsole.getAutoScroll();
 	}
 
-	public void _setAutoScroll(boolean autoscroll) {
-		this.autoScroll = autoscroll;
+	public void _setAutoScroll(boolean autoScroll) {
+		screenConsole.setAutoScroll(autoScroll);
 	}
 
-	public JTextPane _getConsole() {
-		return console;
+	public JTextPane _getScreen() {
+		return screenConsole.getScreen();
 	}
 
 	public JScrollPane _getScroll() {
-		return scroll;
+		return screenConsole;
 	}
 
 	public static boolean isViewable() {
@@ -279,35 +270,10 @@ public class ExternalConsole extends JFrame {
 		return true;
 	}
 
-	private JScrollPane insertConsole() {
-		scroll = new JScrollPane();
-		console = new JTextPane();
-		console.setEditorKit(new WrapEditorKit());
-		// console.setBorder(null);
-		// console.setTabSize(4);
-		console.setEditable(false);
-		// console.setLineWrap(true);
-		DefaultCaret caret = (DefaultCaret) console.getCaret();
-		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-		scroll.setViewportView(console);
-		scroll.setFocusable(false);
-		scroll.setEnabled(false);
-		scroll.setBorder(null);
-		scroll.setWheelScrollingEnabled(true);
-		scroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-		// scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-
-		scroll.setOpaque(false);
-		scroll.getViewport().setOpaque(false);
-		console.setOpaque(false);
-		// console.setForeground(Color.BLACK);
-		this.addComponentListener(new ComponentAdapter() {
-			@Override
-			public void componentResized(ComponentEvent event) {
-				scroll.getVerticalScrollBar().setValue(scroll.getVerticalScrollBar().getMaximum());
-			}
-		});
-		return scroll;
+	public static void removeDemoCmds() {
+		for (ExternalConsoleCommand cmd : singleton.cmds.values().stream().filter(c -> c.isDemo()).toList()) {
+			singleton.cmds.remove(cmd.getCommand());
+		}
 	}
 
 	private JPanel inputConsole() {
@@ -360,7 +326,7 @@ public class ExternalConsole extends JFrame {
 					List<String> options;
 					if (isProgramRunning.get() && cmd != null) {
 						String[] paramOptions = cmd.getParamOptions(args.length - 1, currArgs);
-						options = Stream.of(paramOptions).filter(c -> c.startsWith(ref)).toList();
+						options = paramOptions!=null ? Stream.of(paramOptions).filter(c -> c.startsWith(ref)).toList() : Collections.emptyList();
 					} else if (args.length <= 1 || cmd == null
 							|| cmd.getParamOptions(args.length - 2, currArgs) == null) {
 						options = cmds.values().stream().filter(c -> c.getCommand().startsWith(ref))
@@ -410,9 +376,7 @@ public class ExternalConsole extends JFrame {
 					// console.append("\n");
 					println(input.getText());
 
-					scroll.repaint();
-					scroll.revalidate();
-					in.insertData(input.getText().getBytes());
+					in.insertData((input.getText()+"\n").getBytes());
 					input.setText("");
 					// event.finishedEvent();
 					EventManager.triggerEvent(event);
@@ -465,7 +429,8 @@ public class ExternalConsole extends JFrame {
 		}
 		for (int i = 0; i < input.length(); i++) {
 			char chary = input.charAt(i);
-			if (chary == '\"') {
+			if (chary == '\"' && (i == 0 || (i > 0 && input.charAt(i - 1) != '\\'))) {
+				// if(i>0 && input.charAt(i-1)!='\\')
 				quote = !quote;
 				if (i + 1 == input.length()) {
 					link[0] = arg;
@@ -486,6 +451,8 @@ public class ExternalConsole extends JFrame {
 				link[0] = arg + chary;
 				argSize++;
 			} else {
+				if (chary == '\"')
+					arg = arg.substring(0, arg.length() - 1);
 				arg += chary;
 			}
 		}
@@ -504,9 +471,11 @@ public class ExternalConsole extends JFrame {
 	private String argsToInput(String[] args) {
 		String input = "";
 		for (String string : args) {
-			if (string.indexOf(' ') != -1) {
+			if (string.indexOf('\"') != -1)
+				string = string.replaceAll("\\\"", "\\\\\\\"");
+			if (string.indexOf(' ') != -1)
 				string = String.format("\"%s\"", string);
-			}
+
 			input += string + ' ';
 		}
 		return input.stripTrailing();
@@ -523,7 +492,7 @@ public class ExternalConsole extends JFrame {
 
 	public static void setTheme(ColorTheme theme) {
 		singleton.currentTheme = theme;
-		singleton.console.setForeground(theme.getFont());
+		singleton.screenConsole.getScreen().setForeground(theme.getFont());
 		singleton.setBackground(theme.getBackground());
 
 		singleton.input.setBorder(BorderFactory.createLineBorder(theme.getFont(), 1));
@@ -549,27 +518,13 @@ public class ExternalConsole extends JFrame {
 	}
 
 	public static void println(String msg) {
-		try {
-			StyledDocument doc = singleton.console.getStyledDocument();
-			doc.insertString(doc.getLength(), String.format("%s\n", msg), null);
-			if (singleton.autoScroll)
-				singleton.console.setCaretPosition(doc.getLength());
-			// singleton.console.append(String.format("%s\n", msg));
-			singleton._clearExtraLines();
-			singleton.scroll.repaint();
-			singleton.scroll.revalidate();
-		} catch (BadLocationException e) {
-			e.printStackTrace();
-		}
+		singleton.screenConsole.println(msg);
 	}
 
+	
+
 	public void _clearExtraLines() throws BadLocationException {
-		StyledDocument doc = singleton.console.getStyledDocument();
-		String text = doc.getText(0, doc.getLength());
-		long lines = text.chars().filter(c -> c == '\n').count();
-		for (; lines > LINE_LIMIT; lines--) {
-			doc.remove(0, doc.getText(0, doc.getLength()).indexOf('\n') + 1);
-		}
+		screenConsole._clearExtraLines();	
 	}
 
 	public static ColorTheme getTheme() {
@@ -697,7 +652,13 @@ public class ExternalConsole extends JFrame {
 				}
 				Thread proc = new Thread(() -> {
 					program = cmd;
-					int result = cmd.executeCommand(args);
+					int result = Integer.MIN_VALUE;
+					try {
+						result = cmd.executeCommand(args);						
+					}catch (Throwable e) {
+						e.printStackTrace();
+						println(String.format("An error with %s %s has occurred", cmd.isProgram()?"program":"command", cmd.getCommand()));
+					}
 					if (cmd.isProgram())
 						isProgramRunning.set(false);
 					EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(cmd, args, result));
@@ -805,8 +766,7 @@ public class ExternalConsole extends JFrame {
 	}
 
 	public static void main(String[] args) {
-		if (isTinkeringDisabled())
-			return;
+		// removeDemoCmds();
 		setSystemStreams();
 		registerEventListener(new Object() {
 			@Handler

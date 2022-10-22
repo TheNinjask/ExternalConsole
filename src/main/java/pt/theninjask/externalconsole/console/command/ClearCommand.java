@@ -23,7 +23,7 @@ public class ClearCommand implements ExternalConsoleCommand {
 
 	@Override
 	public int executeCommand(String... args) {
-		console._getConsole().setText("");
+		console._getScreen().setText("");
 		return 0;
 	}
 

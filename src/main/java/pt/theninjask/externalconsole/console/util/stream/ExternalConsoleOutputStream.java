@@ -19,10 +19,10 @@ public class ExternalConsoleOutputStream extends OutputStream {
 	@Override
 	public void write(int b) throws IOException {
 		try {
-			StyledDocument doc = console._getConsole().getStyledDocument();
+			StyledDocument doc = console._getScreen().getStyledDocument();
 			doc.insertString(doc.getLength(), Character.toString(b), null);
 			if (console._getAutoScroll())
-				console._getConsole().setCaretPosition(doc.getLength());
+				console._getScreen().setCaretPosition(doc.getLength());
 			if (b == '\n')
 				console._clearExtraLines();
 			console._getScroll().repaint();

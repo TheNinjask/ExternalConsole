@@ -25,10 +25,10 @@ public class ExternalConsoleErrorOutputStream extends OutputStream {
 	@Override
 	public void write(int b) throws IOException {
 		try {
-			StyledDocument doc = console._getConsole().getStyledDocument();
+			StyledDocument doc = console._getScreen().getStyledDocument();
 			doc.insertString(doc.getLength(), Character.toString(b), errorSet);
 			if (console._getAutoScroll())
-				console._getConsole().setCaretPosition(doc.getLength());
+				console._getScreen().setCaretPosition(doc.getLength());
 			console._getScroll().repaint();
 			console._getScroll().revalidate();
 		} catch (BadLocationException e) {

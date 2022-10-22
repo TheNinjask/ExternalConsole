@@ -60,7 +60,7 @@ public class LoadAnimCommand implements ExternalConsoleCommand {
 					: animation;
 			Object[] loading = console._getLoadings()[animation];
 			int i = 3;
-			StyledDocument doc = console._getConsole().getStyledDocument();
+			StyledDocument doc = console._getScreen().getStyledDocument();
 			int offset = doc.getLength();
 			while (proc.isAlive()) {
 				String msg = String.format("Processing %s", loading[i]);

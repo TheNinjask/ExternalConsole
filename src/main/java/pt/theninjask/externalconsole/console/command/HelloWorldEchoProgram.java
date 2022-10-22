@@ -42,6 +42,11 @@ public class HelloWorldEchoProgram implements ExternalConsoleCommand {
 	public boolean isProgram() {
 		return true;
 	}
+	
+	@Override
+	public boolean isDemo() {
+		return true;
+	}
 
 	@Override
 	public String[] getParamOptions(int number, String[] currArgs) {
