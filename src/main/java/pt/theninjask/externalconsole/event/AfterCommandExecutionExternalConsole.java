@@ -1,32 +1,22 @@
 package pt.theninjask.externalconsole.event;
 
+import lombok.Getter;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
+@Getter
 public class AfterCommandExecutionExternalConsole extends BasicEvent {
 
-	private ExternalConsoleCommand cmd;
-	
-	private String[] args;
-	
-	private int result;
+    private final ExternalConsoleCommand cmd;
 
-	public AfterCommandExecutionExternalConsole(ExternalConsoleCommand cmd, String[] args, int result) {
-			super(AfterCommandExecutionExternalConsole.class.getSimpleName(), false);
-			this.cmd = cmd;
-			this.args = args;
-			this.result = result;
-		}
+    private final String[] args;
 
-	public ExternalConsoleCommand getCmd() {
-		return cmd;
-	}
+    private final int result;
 
-	public String[] getArgs() {
-		return args;
-	}
-
-	public int getResult() {
-		return result;
-	}
+    public AfterCommandExecutionExternalConsole(ExternalConsoleCommand cmd, String[] args, int result) {
+        super(AfterCommandExecutionExternalConsole.class.getSimpleName(), false);
+        this.cmd = cmd;
+        this.args = args;
+        this.result = result;
+    }
 
 }

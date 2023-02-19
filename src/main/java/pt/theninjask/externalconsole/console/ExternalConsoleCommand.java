@@ -4,61 +4,56 @@ import java.util.Comparator;
 
 public interface ExternalConsoleCommand {
 
-	public String getCommand();
+    String getCommand();
 
-	public default String getDescription() {
-		return "N/A";
-	}
+    default String getDescription() {
+        return "N/A";
+    }
 
-	public int executeCommand(String... args);
+    int executeCommand(String... args);
 
-	public default String resultMessage(int result) {
-		return "N/A";
-	}
+    default String resultMessage(int result) {
+        return "N/A";
+    }
 
-	/**
-	 * 
-	 * @param number   - options of parameter in number
-	 * @param currArgs - current arguments of command
-	 * @return null if nothing to provide else all available options
-	 */
-	public default String[] getParamOptions(int number, String[] currArgs) {
-		return null;
-	}
+    /**
+     * @param number   - options of parameter in number
+     * @param currArgs - current arguments of command
+     * @return null if nothing to provide else all available options
+     */
+    default String[] getParamOptions(int number, String[] currArgs) {
+        return null;
+    }
 
-	public static Comparator<ExternalConsoleCommand> comparator = new Comparator<ExternalConsoleCommand>() {
-		@Override
-		public int compare(ExternalConsoleCommand o1, ExternalConsoleCommand o2) {
-			return o1.getCommand().compareTo(o2.getCommand());
-		}
-	};
+    Comparator<ExternalConsoleCommand> comparator = Comparator.comparing(ExternalConsoleCommand::getCommand);
 
-	/**
-	 * It determines if this command can be run in code without explicitly by the
-	 * user
-	 * 
-	 * @return For security reasons it is false by default
-	 */
-	public default boolean accessibleInCode() {
-		return false;
-	}
+    /**
+     * It determines if this command can be run in code without explicitly by the
+     * user
+     *
+     * @return For security reasons it is false by default
+     */
+    default boolean accessibleInCode() {
+        return false;
+    }
 
-	/**
-	 * If true when run through the ExternalConsole it is intended to work like a
-	 * java program is run in the command line
-	 * 
-	 * @return
-	 */
-	public default boolean isProgram() {
-		return false;
-	}
-	
-	/**
-	 * If true, it means the command is not intended for use and can be removed
-	 * with ExternalConsole.removeDemoCmds()
-	 * @return
-	 */
-	public default boolean isDemo() {
-		return false;
-	}
+    /**
+     * If true when run through the ExternalConsole it is intended to work like a
+     * java program is run in the command line
+     *
+     * @return default false
+     */
+    default boolean isProgram() {
+        return false;
+    }
+
+    /**
+     * If true, it means the command is not intended for use and can be removed
+     * with ExternalConsole.removeDemoCmds()
+     *
+     * @return default false
+     */
+    default boolean isDemo() {
+        return false;
+    }
 }
