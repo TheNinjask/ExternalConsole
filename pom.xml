@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>pt.theninjask</groupId>
     <artifactId>externalconsole</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
     <packaging>jar</packaging>
 
     <name>ExternalConsole</name>
@@ -58,6 +58,23 @@
             <version>2.7.3</version>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
     <distributionManagement>
         <repository>

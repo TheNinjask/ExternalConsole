@@ -34,7 +34,7 @@ public class JythonProgram implements ExternalConsoleCommand {
             try (InteractiveConsole jython = new InteractiveConsole()) {
                 this.jython = jython;
                 this.isRunning = true;
-                ExternalConsole.println("Jython 2.7.3");
+                ExternalConsole.println("Jython 2.7.3 (CTRL+Z to exit)");
                 while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_Z))) {
                     String str;
                     if ((str = read.readLine()) != null)
