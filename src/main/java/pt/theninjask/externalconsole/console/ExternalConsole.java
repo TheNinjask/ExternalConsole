@@ -80,6 +80,8 @@ public class ExternalConsole extends JFrame {
 
     private final Map<String, ExternalConsoleCommand> cmds;
 
+    private final Map<String, String> vars;
+
     private ColorTheme currentTheme;
 
     private UsedCommand last;
@@ -119,6 +121,7 @@ public class ExternalConsole extends JFrame {
 
         // this.setAlwaysOnTop(true);
         this.cmds = new HashMap<>();
+        this.vars = new HashMap<>();
 
         Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
         List<Class<? extends ExternalConsoleCommand>> cmds = reflections.getSubTypesOf(ExternalConsoleCommand.class)
@@ -235,6 +238,10 @@ public class ExternalConsole extends JFrame {
 
     public Map<String, ExternalConsoleCommand> _getAllCommands() {
         return cmds;
+    }
+
+    public Map<String, String> getAllVars() {
+        return vars;
     }
 
     public static List<ExternalConsoleCommand> getAllCommands() {
@@ -484,7 +491,9 @@ public class ExternalConsole extends JFrame {
             args[i] = (String) link[0];
             link = (Object[]) link[1];
         }
-        return args;
+        return Arrays.stream(args)
+                .map(argy -> vars.getOrDefault(argy, argy))
+                .toArray(String[]::new);
     }
 
     private String argsToInput(String[] args) {
@@ -578,6 +587,11 @@ public class ExternalConsole extends JFrame {
     public static void unregisterEventListener(Object listener) {
         EventManager.unregisterEventListener(listener);
     }
+
+    public static void triggerEvent(Event event) {
+        EventManager.triggerEvent(event);
+    }
+
 
     // Cannot think of a use case and will be in conflict with OnCommand()
     /*

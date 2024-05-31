@@ -1,4 +1,4 @@
-package pt.theninjask.externalconsole.console.command;
+package pt.theninjask.externalconsole.console.command.core;
 
 import org.apache.commons.cli.*;
 import pt.theninjask.externalconsole.console.ExternalConsole;
@@ -7,40 +7,39 @@ import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import java.io.PrintWriter;
 import java.util.Map;
 
-public class AutoScrollCommand implements ExternalConsoleCommand {
+public class TopCommand implements ExternalConsoleCommand {
 
     private final Map<Option, Runnable> optionsMap;
     private final ExternalConsole console;
 
-    public AutoScrollCommand(ExternalConsole console) {
+    public TopCommand(ExternalConsole console) {
         this.console = console;
         optionsMap = Map
                 .ofEntries(
                         Map.entry(
-                                new Option("a", "auto", false, "Sets Scroll to Auto"),
-                                () -> console._setAutoScroll(true)),
+                                new Option("t", "true", false, "AlwaysOnTop Set to True"),
+                                () -> console.setAlwaysOnTop(true)),
                         Map.entry(
-                                new Option("m", "manual", false, "Sets Scroll to Manual"),
-                                () -> console._setAutoScroll(false)));
+                                new Option("f", "false", false, "AlwaysOnTop Set to False"),
+                                () -> console.setAlwaysOnTop(false)));
     }
 
     @Override
     public String getCommand() {
-        return "autoscroll";
+        return "top";
     }
 
     @Override
     public String getDescription() {
-        return "Enables/Disables autoscrolling of ExternalConsole";
+        return "Flag for ExternalConsole be always on top";
     }
 
     @Override
     public int executeCommand(String... args) {
         Options options = new Options();
-        OptionGroup scroll = new OptionGroup();
-        // scroll.setRequired(true);
-        optionsMap.keySet().forEach(scroll::addOption);
-        options.addOptionGroup(scroll);
+        OptionGroup top = new OptionGroup();
+        optionsMap.keySet().forEach(top::addOption);
+        options.addOptionGroup(top);
         try {
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
@@ -53,12 +52,11 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
                 }
             });
             if (!succ) {
-                ExternalConsole.println(String.format("autoscroll is set as: %s", console._getAutoScroll()));
+                ExternalConsole.println(String.format("AlwaysOnTop is set as: %s", console.isAlwaysOnTop()));
                 new HelpFormatter().printHelp(new PrintWriter(console.getOutputStream(), true), HelpFormatter.DEFAULT_WIDTH,
-                        "autoscroll", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD,
-                        null, true);
+                        "top", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, null,
+                        true);
             }
-
         } catch (ParseException e) {
             ExternalConsole.println(e.getMessage());
             return 1;
@@ -69,7 +67,8 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
         return switch (number) {
-            case 0 -> optionsMap.keySet()
+            case 0 -> optionsMap
+                    .keySet()
                     .stream()
                     .map(o -> String.format("--%s", o.getLongOpt()))
                     .toList()
@@ -82,4 +81,5 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
     public boolean accessibleInCode() {
         return true;
     }
+
 }

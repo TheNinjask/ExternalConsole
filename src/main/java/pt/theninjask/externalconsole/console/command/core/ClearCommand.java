@@ -1,29 +1,27 @@
-package pt.theninjask.externalconsole.console.command;
+package pt.theninjask.externalconsole.console.command.core;
 
 import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
-import javax.swing.*;
-
 @RequiredArgsConstructor
-public class HideCommand implements ExternalConsoleCommand {
+public class ClearCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
 
     @Override
     public String getCommand() {
-        return "hide";
+        return "cls";
     }
 
     @Override
     public String getDescription() {
-        return "Hides External Console";
+        return "Clears ExternalConsole";
     }
 
     @Override
     public int executeCommand(String... args) {
-        console.setExtendedState(JFrame.ICONIFIED);
+        console._getScreen().setText("");
         return 0;
     }
 

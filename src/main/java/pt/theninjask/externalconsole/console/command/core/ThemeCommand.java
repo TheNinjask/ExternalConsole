@@ -1,4 +1,4 @@
-package pt.theninjask.externalconsole.console.command;
+package pt.theninjask.externalconsole.console.command.core;
 
 import org.apache.commons.cli.*;
 import pt.theninjask.externalconsole.console.ExternalConsole;
@@ -101,7 +101,7 @@ public class ThemeCommand implements ExternalConsoleCommand {
                     current = ExternalConsole.getTheme().name();
                 ExternalConsole.println(String.format("Theme is set as: %s", current));
                 new HelpFormatter().printHelp(new PrintWriter(console.getOutputStream(), true), HelpFormatter.DEFAULT_WIDTH,
-                        "theme", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, null,
+                        this.getCommand(), null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, null,
                         true);
             }
         } catch (ParseException e) {

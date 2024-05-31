@@ -1,29 +1,35 @@
-package pt.theninjask.externalconsole.console.command;
+package pt.theninjask.externalconsole.console.command.core;
 
 import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
+import javax.swing.*;
+
 @RequiredArgsConstructor
-public class ForceStopCommand implements ExternalConsoleCommand {
+public class HideCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
 
     @Override
     public String getCommand() {
-        return "forceStop";
+        return "hide";
     }
 
     @Override
     public String getDescription() {
-        return "It terminates the running JVM";
+        return "Hides External Console";
     }
 
     @Override
     public int executeCommand(String... args) {
-        console.dispose();
-        System.exit(0);
+        console.setExtendedState(JFrame.ICONIFIED);
         return 0;
+    }
+
+    @Override
+    public boolean accessibleInCode() {
+        return true;
     }
 
 }

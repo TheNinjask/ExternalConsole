@@ -1,4 +1,4 @@
-package pt.theninjask.externalconsole.console.command;
+package pt.theninjask.externalconsole.console.command.core;
 
 import lombok.RequiredArgsConstructor;
 import org.python.core.PyStringMap;

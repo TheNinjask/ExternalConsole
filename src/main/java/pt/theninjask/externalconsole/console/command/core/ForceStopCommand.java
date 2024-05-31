@@ -1,33 +1,29 @@
-package pt.theninjask.externalconsole.console.command;
+package pt.theninjask.externalconsole.console.command.core;
 
 import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
 @RequiredArgsConstructor
-public class ClearCommand implements ExternalConsoleCommand {
+public class ForceStopCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
 
     @Override
     public String getCommand() {
-        return "cls";
+        return "forceStop";
     }
 
     @Override
     public String getDescription() {
-        return "Clears ExternalConsole";
+        return "It terminates the running JVM";
     }
 
     @Override
     public int executeCommand(String... args) {
-        console._getScreen().setText("");
+        console.dispose();
+        System.exit(0);
         return 0;
-    }
-
-    @Override
-    public boolean accessibleInCode() {
-        return true;
     }
 
 }
