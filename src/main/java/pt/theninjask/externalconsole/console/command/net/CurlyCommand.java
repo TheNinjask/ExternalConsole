@@ -3,6 +3,7 @@ package pt.theninjask.externalconsole.console.command.net;
 import org.apache.commons.cli.*;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
+import pt.theninjask.externalconsole.console.command.file.ChangeDirectoryCommand;
 
 import java.io.PrintWriter;
 import java.net.URI;
@@ -58,6 +59,18 @@ public class CurlyCommand implements ExternalConsoleCommand {
             .hasArgs()
             .build();
 
+    private final Option dumpOpt = Option.builder("d")
+            .longOpt("dump")
+            .desc("Dumps request's response to a file")
+            .numberOfArgs(1)
+            .build();
+
+    private final Option statusOpt = Option.builder("s")
+            .longOpt("status")
+            .desc("Flag to print request's status")
+            .hasArg(false)
+            .build();
+
     public CurlyCommand(ExternalConsole console) {
         this.console = console;
         this.optionsMap = Map
@@ -80,11 +93,19 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         ),
                         Map.entry(
                                 bodyOpt,
-                                () -> null
+                                () -> new String[]{"body"}
                         ),
                         Map.entry(
                                 headersOpt,
                                 () -> new String[]{"key", "value"}
+                        ),
+                        Map.entry(
+                                dumpOpt,
+                                () -> new String[]{"response.txt"}
+                        ),
+                        Map.entry(
+                                statusOpt,
+                                () -> null
                         )
                 );
     }
@@ -137,7 +158,15 @@ public class CurlyCommand implements ExternalConsoleCommand {
             var request = preRequest.build();
             var response = HttpClient.newHttpClient()
                     .send(request, HttpResponse.BodyHandlers.ofString());
-            ExternalConsole.println(response.body());
+            if (cmd.hasOption(statusOpt.getOpt())) {
+                ExternalConsole.println("Status code: %1$s".formatted(response.statusCode()));
+            }
+            if (cmd.hasOption(dumpOpt.getOpt())) {
+                var fileToDump = ChangeDirectoryCommand.getCurrentDir().resolve(cmd.getOptionValue(dumpOpt.getOpt()));
+                Files.writeString(fileToDump, response.body());
+            } else {
+                ExternalConsole.println(response.body());
+            }
             ExternalConsole.triggerEvent(
                     new CurlyResponseEvent(
                             cmd.getOptionValue(idOpt.getOpt()),

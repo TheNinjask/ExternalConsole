@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.file;
 
+import lombok.Getter;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
@@ -9,11 +10,8 @@ import java.nio.file.Paths;
 
 public class ChangeDirectoryCommand implements ExternalConsoleCommand {
 
+    @Getter
     private static Path currentDir = Paths.get(".");
-
-    public static Path getCurrentDir() {
-        return currentDir;
-    }
 
     @Override
     public String getCommand() {
