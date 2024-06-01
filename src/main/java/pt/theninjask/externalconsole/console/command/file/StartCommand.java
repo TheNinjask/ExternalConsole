@@ -4,7 +4,6 @@ import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
 import java.awt.*;
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -43,8 +42,7 @@ public class StartCommand implements ExternalConsoleCommand {
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
         return switch (number) {
-            case 0 ->
-                    ChangeDirectoryCommand.getCurrentDir().toFile().list();
+            case 0 -> ChangeDirectoryCommand.getCurrentDir().toFile().list();
             default -> null;
         };
     }
