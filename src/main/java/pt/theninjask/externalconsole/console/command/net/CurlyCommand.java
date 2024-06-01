@@ -9,7 +9,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 public class CurlyCommand implements ExternalConsoleCommand {
@@ -20,17 +23,18 @@ public class CurlyCommand implements ExternalConsoleCommand {
 
     private final Option urlOpt = Option.builder("u")
             .longOpt("url")
-            .desc("Set url request")
+            .desc("Set request's url")
             .required()
             .numberOfArgs(1)
             .build();
     private final Option methodOpt = Option.builder("m")
             .longOpt("method")
-            .desc("Set url request method")
+            .desc("Set request's method")
             .required()
             .numberOfArgs(1)
             .build();
-    private final Option helpOpt = Option.builder("h")
+
+    private final Option helpOpt = Option.builder("?")
             .longOpt("help")
             .desc("Gets help")
             .hasArg(false)
@@ -40,6 +44,18 @@ public class CurlyCommand implements ExternalConsoleCommand {
             .longOpt("id")
             .desc("Associates an ID to the request")
             .numberOfArgs(1)
+            .build();
+
+    private final Option bodyOpt = Option.builder("b")
+            .longOpt("body")
+            .desc("Set request's body path")
+            .numberOfArgs(1)
+            .build();
+
+    private final Option headersOpt = Option.builder("h")
+            .longOpt("headers")
+            .desc("Set request's headers (comes in pairs)")
+            .hasArgs()
             .build();
 
     public CurlyCommand(ExternalConsole console) {
@@ -52,11 +68,23 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         ),
                         Map.entry(
                                 methodOpt,
-                                () -> new String[]{"GET", "PUT", "POST", "DELETE"}
+                                () -> new String[]{"GET", "PUT", "POST", "DELETE", "PATCH"}
                         ),
                         Map.entry(
                                 helpOpt,
                                 () -> null
+                        ),
+                        Map.entry(
+                                idOpt,
+                                () -> new String[]{UUID.randomUUID().toString()}
+                        ),
+                        Map.entry(
+                                bodyOpt,
+                                () -> null
+                        ),
+                        Map.entry(
+                                headersOpt,
+                                () -> new String[]{"key", "value"}
                         )
                 );
     }
@@ -86,23 +114,35 @@ public class CurlyCommand implements ExternalConsoleCommand {
         try {
             CommandLineParser parser = new DefaultParser();
             CommandLine cmd = parser.parse(options, args);
-            if (cmd.hasOption('h')) {
+            if (cmd.hasOption(helpOpt.getOpt())) {
                 printHelp();
                 return 0;
             }
 
-            var request = HttpRequest.newBuilder()
-                    .uri(new URI(cmd.getOptionValue('u')))
-                    .method(cmd.getOptionValue('m'), HttpRequest.BodyPublishers.noBody())
-                    .build();
+            var preRequest = HttpRequest.newBuilder()
+                    .uri(new URI(cmd.getOptionValue(urlOpt.getOpt())))
+                    .method(cmd.getOptionValue(methodOpt.getOpt()),
+                            cmd.hasOption(bodyOpt.getOpt()) ?
+                                    HttpRequest.BodyPublishers.ofString(
+                                            new String(
+                                                    Files.readAllBytes(
+                                                            Paths.get(
+                                                                    cmd.getOptionValue(bodyOpt.getOpt())
+                                                            )))
+                                    ) :
+                                    HttpRequest.BodyPublishers.noBody());
+            if (cmd.hasOption(headersOpt.getOpt())) {
+                preRequest = preRequest.headers(cmd.getOptionValues(headersOpt.getOpt()));
+            }
+            var request = preRequest.build();
             var response = HttpClient.newHttpClient()
                     .send(request, HttpResponse.BodyHandlers.ofString());
             ExternalConsole.println(response.body());
             ExternalConsole.triggerEvent(
                     new CurlyResponseEvent(
-                            cmd.getOptionValue('i'),
-                            cmd.getOptionValue('u'),
-                            cmd.getOptionValue('m'),
+                            cmd.getOptionValue(idOpt.getOpt()),
+                            cmd.getOptionValue(urlOpt.getOpt()),
+                            cmd.getOptionValue(methodOpt.getOpt()),
                             response.statusCode(),
                             response.body()
                     )
@@ -145,8 +185,4 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         .toArray(new String[optionsMap.size()]));
     }
 
-    @Override
-    public boolean isDemo() {
-        return true;
-    }
 }
