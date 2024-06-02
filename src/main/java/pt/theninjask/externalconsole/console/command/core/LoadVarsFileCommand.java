@@ -37,7 +37,9 @@ public class LoadVarsFileCommand implements ExternalConsoleCommand {
                 json.fields()
                         .forEachRemaining(field ->
                                 console.getAllVars()
-                                        .put(field.getKey(), field.getValue().toString()));
+                                        .put(field.getKey(),
+                                                field.getValue().isObject() || field.getValue().isArray() ?
+                                                        field.getValue().toString() : field.getValue().asText()));
             }
         } catch (IOException e) {
             e.printStackTrace();
