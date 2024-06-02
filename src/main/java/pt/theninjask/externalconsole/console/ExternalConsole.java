@@ -261,6 +261,7 @@ public class ExternalConsole extends JFrame {
         ExternalConsoleCommand ecmd = singleton.cmds.get(cmd);
         if (ecmd == null || !ecmd.accessibleInCode() || ecmd.isProgram())
             return false;
+        args = singleton.parseArgsVars(args);
         int result = ecmd.executeCommand(args);
         EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(ecmd, args, result));
         return true;
@@ -412,6 +413,39 @@ public class ExternalConsole extends JFrame {
             }
         });
 
+        screenConsole.getScreen().setDropTarget(new DropTarget() {
+            /**
+             *
+             */
+            @Serial
+            private static final long serialVersionUID = 1L;
+
+            @SuppressWarnings("unchecked")
+            public void drop(DropTargetDropEvent evt) {
+                try {
+                    evt.acceptDrop(DnDConstants.ACTION_COPY);
+                    List<File> droppedFiles = (List<File>) evt
+                            .getTransferable().getTransferData(
+                                    DataFlavor.javaFileListFlavor);
+                    StringJoiner join = new StringJoiner(
+                            String.format("%s%s%s", QUOTE_CHAR, ARG_DIV_CHAR, QUOTE_CHAR),
+                            String.valueOf(QUOTE_CHAR),
+                            String.valueOf(QUOTE_CHAR));
+                    for (File file : droppedFiles) {
+                        join.add(file.getAbsolutePath());
+                    }
+                    StringBuilder build = new StringBuilder();
+                    build.append(input.getText());
+                    if (build.length() > 0 && build.charAt(build.length() - 1) != ARG_DIV_CHAR)
+                        build.append(ARG_DIV_CHAR);
+                    build.append(join);
+                    input.setText(build.toString());
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
         messagePanel.add(input, BorderLayout.CENTER);
         return messagePanel;
 
@@ -491,6 +525,10 @@ public class ExternalConsole extends JFrame {
             args[i] = (String) link[0];
             link = (Object[]) link[1];
         }
+        return parseArgsVars(args);
+    }
+
+    private String[] parseArgsVars(String[] args) {
         return Arrays.stream(args)
                 .map(argy -> vars.getOrDefault(argy, argy))
                 .toArray(String[]::new);

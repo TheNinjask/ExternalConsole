@@ -51,4 +51,9 @@ public class SetVarCommand implements ExternalConsoleCommand {
             default -> "Error unkown %s".formatted(result);
         };
     }
+
+    @Override
+    public boolean accessibleInCode() {
+        return true;
+    }
 }
