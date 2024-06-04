@@ -1,14 +1,16 @@
 package pt.theninjask.externalconsole.console.command.util;
 
-import lombok.RequiredArgsConstructor;
-
-@RequiredArgsConstructor
 public enum Bytes {
     TERABYTE("TB", null), GIGABYTE("GB", TERABYTE), MEGABYTE("MB", GIGABYTE), KILOBYTE("KB", MEGABYTE),
     BYTE("B", KILOBYTE);
 
     private final String sigla;
     private final Bytes bigger;
+
+    Bytes(String sigla, Bytes bigger) {
+        this.sigla = sigla;
+        this.bigger = bigger;
+    }
 
     public String toString() {
         return sigla;

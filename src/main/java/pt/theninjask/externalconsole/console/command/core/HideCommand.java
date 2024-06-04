@@ -1,15 +1,17 @@
 package pt.theninjask.externalconsole.console.command.core;
 
-import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
 import javax.swing.*;
 
-@RequiredArgsConstructor
 public class HideCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
+
+    public HideCommand(ExternalConsole console) {
+        this.console = console;
+    }
 
     @Override
     public String getCommand() {

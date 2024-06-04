@@ -1,7 +1,6 @@
 package pt.theninjask.externalconsole.console.command.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
@@ -10,10 +9,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-@RequiredArgsConstructor
 public class LoadVarsFileCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
+
+    public LoadVarsFileCommand(ExternalConsole console) {
+        this.console = console;
+    }
 
     @Override
     public String getCommand() {

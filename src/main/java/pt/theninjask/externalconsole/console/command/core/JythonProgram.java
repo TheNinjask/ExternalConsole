@@ -1,6 +1,5 @@
 package pt.theninjask.externalconsole.console.command.core;
 
-import lombok.RequiredArgsConstructor;
 import org.python.core.PyStringMap;
 import org.python.util.InteractiveConsole;
 import pt.theninjask.externalconsole.console.ExternalConsole;
@@ -12,7 +11,6 @@ import java.io.InputStreamReader;
 
 import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
 
-@RequiredArgsConstructor
 public class JythonProgram implements ExternalConsoleCommand {
 
     private boolean isRunning = false;
@@ -20,6 +18,10 @@ public class JythonProgram implements ExternalConsoleCommand {
     private InteractiveConsole jython;
 
     private final ExternalConsole console;
+
+    public JythonProgram(ExternalConsole console) {
+        this.console = console;
+    }
 
     @Override
     public String getCommand() {

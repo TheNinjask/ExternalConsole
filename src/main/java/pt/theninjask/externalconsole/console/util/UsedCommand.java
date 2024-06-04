@@ -1,17 +1,9 @@
 package pt.theninjask.externalconsole.console.util;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-
-@Getter
-@AllArgsConstructor
 public class UsedCommand {
     private final String fullCommand;
-    @Setter
     private UsedCommand previous;
 
-    @Setter
     private UsedCommand next;
 
 
@@ -23,4 +15,29 @@ public class UsedCommand {
         this.next = this;
     }
 
+    public UsedCommand(String fullCommand, UsedCommand previous, UsedCommand next) {
+        this.fullCommand = fullCommand;
+        this.previous = previous;
+        this.next = next;
+    }
+
+    public String getFullCommand() {
+        return this.fullCommand;
+    }
+
+    public UsedCommand getPrevious() {
+        return this.previous;
+    }
+
+    public UsedCommand getNext() {
+        return this.next;
+    }
+
+    public void setPrevious(UsedCommand previous) {
+        this.previous = previous;
+    }
+
+    public void setNext(UsedCommand next) {
+        this.next = next;
+    }
 }

@@ -1,7 +1,5 @@
 package pt.theninjask.externalconsole.console;
 
-import lombok.Getter;
-import lombok.Setter;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
@@ -62,16 +60,10 @@ public class ExternalConsole extends JFrame {
 
     public static final ColorTheme DAY_THEME = new ColorTheme("Day", Color.BLACK, Color.WHITE);
 
-    @Getter
-    @Setter
     private ExternalConsoleOutputStream outputStream;
 
-    @Getter
-    @Setter
     private ExternalConsoleErrorOutputStream errorOutputStream;
 
-    @Getter
-    @Setter
     private ExternalConsoleInputStream inputStream;
 
     private JPanel messagePanel;
@@ -748,6 +740,30 @@ public class ExternalConsole extends JFrame {
             }
             // });
         }).start();
+    }
+
+    public ExternalConsoleOutputStream getOutputStream() {
+        return this.outputStream;
+    }
+
+    public ExternalConsoleErrorOutputStream getErrorOutputStream() {
+        return this.errorOutputStream;
+    }
+
+    public ExternalConsoleInputStream getInputStream() {
+        return this.inputStream;
+    }
+
+    public void setOutputStream(ExternalConsoleOutputStream outputStream) {
+        this.outputStream = outputStream;
+    }
+
+    public void setErrorOutputStream(ExternalConsoleErrorOutputStream errorOutputStream) {
+        this.errorOutputStream = errorOutputStream;
+    }
+
+    public void setInputStream(ExternalConsoleInputStream inputStream) {
+        this.inputStream = inputStream;
     }
 
     private static class EventManager {

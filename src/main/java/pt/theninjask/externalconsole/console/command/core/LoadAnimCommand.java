@@ -1,6 +1,5 @@
 package pt.theninjask.externalconsole.console.command.core;
 
-import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
@@ -10,10 +9,13 @@ import javax.swing.text.StyledDocument;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
-@RequiredArgsConstructor
 public class LoadAnimCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
+
+    public LoadAnimCommand(ExternalConsole console) {
+        this.console = console;
+    }
 
     @Override
     public String getCommand() {

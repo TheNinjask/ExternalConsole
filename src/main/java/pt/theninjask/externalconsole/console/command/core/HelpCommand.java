@@ -1,15 +1,17 @@
 package pt.theninjask.externalconsole.console.command.core;
 
-import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
 import java.util.List;
 
-@RequiredArgsConstructor
 public class HelpCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
+
+    public HelpCommand(ExternalConsole console) {
+        this.console = console;
+    }
 
     @Override
     public String getCommand() {

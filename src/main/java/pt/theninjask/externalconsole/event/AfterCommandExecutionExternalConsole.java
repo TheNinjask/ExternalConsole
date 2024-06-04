@@ -1,9 +1,7 @@
 package pt.theninjask.externalconsole.event;
 
-import lombok.Getter;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
-@Getter
 public class AfterCommandExecutionExternalConsole extends BasicEvent {
 
     private final ExternalConsoleCommand cmd;
@@ -19,4 +17,15 @@ public class AfterCommandExecutionExternalConsole extends BasicEvent {
         this.result = result;
     }
 
+    public ExternalConsoleCommand getCmd() {
+        return this.cmd;
+    }
+
+    public String[] getArgs() {
+        return this.args;
+    }
+
+    public int getResult() {
+        return this.result;
+    }
 }

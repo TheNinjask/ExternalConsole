@@ -1,13 +1,15 @@
 package pt.theninjask.externalconsole.console.command.core;
 
-import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
-@RequiredArgsConstructor
 public class ClearCommand implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
+
+    public ClearCommand(ExternalConsole console) {
+        this.console = console;
+    }
 
     @Override
     public String getCommand() {

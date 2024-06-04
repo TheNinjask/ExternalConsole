@@ -1,9 +1,7 @@
 package pt.theninjask.externalconsole.console.command.net;
 
-import lombok.Getter;
 import pt.theninjask.externalconsole.event.BasicEvent;
 
-@Getter
 public class CurlyResponseEvent extends BasicEvent {
 
     private final String id;
@@ -21,4 +19,23 @@ public class CurlyResponseEvent extends BasicEvent {
         this.body = body;
     }
 
+    public String getId() {
+        return this.id;
+    }
+
+    public String getUrl() {
+        return this.url;
+    }
+
+    public String getHttpMethod() {
+        return this.httpMethod;
+    }
+
+    public int getStatusCode() {
+        return this.statusCode;
+    }
+
+    public String getBody() {
+        return this.body;
+    }
 }
