@@ -399,6 +399,7 @@ public class ExternalConsole extends JFrame {
                         build.append(ARG_DIV_CHAR);
                     build.append(join);
                     input.setText(build.toString());
+                    input.requestFocusInWindow();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -432,6 +433,7 @@ public class ExternalConsole extends JFrame {
                         build.append(ARG_DIV_CHAR);
                     build.append(join);
                     input.setText(build.toString());
+                    input.requestFocusInWindow();
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }

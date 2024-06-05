@@ -8,6 +8,7 @@ import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import java.awt.event.KeyEvent;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 
 import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
 
@@ -30,9 +31,16 @@ public class JythonProgram implements ExternalConsoleCommand {
 
     @Override
     public int executeCommand(String... args) {
-        ExternalConsole.executeCommand("cls");
-        BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
         try {
+            if (args.length > 0) {
+                var line = Arrays.stream(args).reduce("%s %s"::formatted).get();
+                try (InteractiveConsole jython = new InteractiveConsole()) {
+                    jython.push(line);
+                }
+                return 0;
+            }
+            ExternalConsole.executeCommand("cls");
+            BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
             try (InteractiveConsole jython = new InteractiveConsole()) {
                 this.jython = jython;
                 this.isRunning = true;
@@ -45,10 +53,10 @@ public class JythonProgram implements ExternalConsoleCommand {
                 this.isRunning = false;
                 this.jython = null;
             }
+            ExternalConsole.executeCommand("cls");
         } catch (Exception e) {
             e.printStackTrace();
         }
-        ExternalConsole.executeCommand("cls");
         ExternalConsole.println("Leaving Jython Interpreter ...");
         return 0;
     }
