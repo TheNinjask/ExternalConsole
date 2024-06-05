@@ -157,11 +157,13 @@ public class CurlyCommand implements ExternalConsoleCommand {
                 var queryOptValues = cmd.getOptionValues(queryOpt.getOpt());
                 var queryParamsAsString = IntStream.range(0, queryOptValues.length)
                         .filter(i -> i % 2 == 0)
-                        .mapToObj(i -> "%s=%s".formatted(queryOptValues[i], i + 1 < queryOptValues.length ? queryOptValues[i + 1] : ""))
+                        .mapToObj(i -> "%s=%s".formatted(
+                                URLEncoder.encode(queryOptValues[i], StandardCharsets.UTF_8),
+                                i + 1 < queryOptValues.length ? URLEncoder.encode(queryOptValues[i + 1], StandardCharsets.UTF_8) : ""))
                         .reduce("%s&%s"::formatted)
                         .orElse("");
                 url = url.concat("?%s".formatted(
-                        URLEncoder.encode(queryParamsAsString, StandardCharsets.UTF_8)
+                        queryParamsAsString
                 ));
             }
             var preRequest = HttpRequest.newBuilder()
