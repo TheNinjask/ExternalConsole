@@ -53,12 +53,11 @@ public class AndCommand implements ExternalConsoleCommand {
 
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
-        if (true)
-            return null;
         int nextType = CMD;
         var it = Arrays.stream(currArgs).iterator();
         String lastCmd = null;
-        int lastCmdNumberIndex = -1;
+        number = 0;
+        int lastCmdNumberIndex = 0;
         int lastCmdNumber = -1;
         int lastCmdCurrentNumber = lastCmdNumber;
         while (it.hasNext()) {
@@ -75,11 +74,12 @@ public class AndCommand implements ExternalConsoleCommand {
                 }
                 case CMD_ARGS -> {
                     lastCmdCurrentNumber++;
+                    it.next();
                     if (lastCmdNumber == lastCmdCurrentNumber)
                         nextType = CMD;
                 }
             }
-            number--;
+            number++;
         }
         switch (nextType) {
             default:
