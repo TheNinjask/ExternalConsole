@@ -102,7 +102,7 @@ public class ExternalConsole extends JFrame {
         this.currentTheme = NIGHT_THEME;
         this.setMinimumSize(new Dimension(300, 300));
         this.setLayout(new BorderLayout());
-        this.screenConsole = new ScreenConsole();
+        this.screenConsole = new ScreenConsole(this);
         this.add(screenConsole, BorderLayout.CENTER);
         this.add(inputConsole(), BorderLayout.SOUTH);
         screenConsole.getParent().setBackground(null);

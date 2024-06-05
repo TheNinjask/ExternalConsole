@@ -100,4 +100,12 @@ public class AndCommand implements ExternalConsoleCommand {
     public boolean accessibleInCode() {
         return true;
     }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
+    }
 }

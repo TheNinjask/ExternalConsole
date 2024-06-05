@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.component;
 
+import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.util.WrapEditorKit;
 
 import javax.swing.*;
@@ -18,11 +19,13 @@ public class ScreenConsole extends JScrollPane {
     @Serial
     private static final long serialVersionUID = 1L;
     private static final int LINE_LIMIT = 493;
+    private final ExternalConsole console;
     private final JTextPane screen;
     private boolean autoScroll;
 
-    public ScreenConsole() {
+    public ScreenConsole(ExternalConsole console) {
         super();
+        this.console = console;
         this.autoScroll = true;
         screen = new JTextPane();
         screen.setEditorKit(new WrapEditorKit());
@@ -62,18 +65,10 @@ public class ScreenConsole extends JScrollPane {
     }
 
     public void println(String msg) {
-        try {
-            StyledDocument doc = screen.getStyledDocument();
-            doc.insertString(doc.getLength(), String.format("%s\n", msg), null);
-            if (autoScroll)
-                screen.setCaretPosition(doc.getLength());
-            // singleton.console.append(String.format("%s\n", msg));
-            _clearExtraLines();
-            this.repaint();
-            this.revalidate();
-        } catch (BadLocationException e) {
-            e.printStackTrace();
-        }
+        String.format("%s\n", msg)
+                .chars()
+                .forEachOrdered(c -> console.getOutputStream()
+                        .write(c));
     }
 
     public void _clearExtraLines() throws BadLocationException {

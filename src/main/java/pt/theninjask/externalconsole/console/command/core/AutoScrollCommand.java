@@ -84,8 +84,8 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
 
     @Override
     public String resultMessage(int result) {
-        return switch (result){
-            case -1 -> null;
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
             default -> ExternalConsoleCommand.super.resultMessage(result);
         };
     }
