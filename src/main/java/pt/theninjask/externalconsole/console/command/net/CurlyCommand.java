@@ -205,10 +205,10 @@ public class CurlyCommand implements ExternalConsoleCommand {
         } catch (ParseException e) {
             ExternalConsole.println(e.getMessage());
             printHelp();
-            return -1;
+            return -2;
         } catch (Exception e) {
             ExternalConsole.println(e.getMessage());
-            return -2;
+            return -1;
         }
         return 0;
     }
@@ -238,6 +238,14 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         .map(o -> String.format("--%s", o.getLongOpt()))
                         .toList()
                         .toArray(new String[optionsMap.size()]));
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 
 }

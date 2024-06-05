@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.logging.*;
 import java.util.stream.Stream;
 
@@ -100,8 +101,6 @@ public class ExternalConsole extends JFrame {
 
         this.currentTheme = NIGHT_THEME;
         this.setMinimumSize(new Dimension(300, 300));
-        // ImageIcon icon = new ImageIcon(Constants.ICON_PATH);
-        // this.setIconImage(icon.getImage());
         this.setLayout(new BorderLayout());
         this.screenConsole = new ScreenConsole();
         this.add(screenConsole, BorderLayout.CENTER);
@@ -111,7 +110,6 @@ public class ExternalConsole extends JFrame {
         this.errorOutputStream = new ExternalConsoleErrorOutputStream(this);
         this.inputStream = new ExternalConsoleInputStream();
 
-        // this.setAlwaysOnTop(true);
         this.cmds = new HashMap<>();
         this.vars = new HashMap<>();
 
@@ -142,8 +140,6 @@ public class ExternalConsole extends JFrame {
                 }
             }
         }
-
-        // this.cmds.put(tinker.getCommand(), tinker);
 
         this.last = UsedCommand.NULL_UC;
 
@@ -270,10 +266,6 @@ public class ExternalConsole extends JFrame {
         input = new JTextField();
         input.setBorder(null);
 
-        // input.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
-        // input.setForeground(Color.BLACK);
-        // input.setCaretColor(Color.BLACK);
-        // input.setBackground(Color.WHITE);
         input.setFocusTraversalKeysEnabled(false);
         input.addKeyListener(new KeyListener() {
 
@@ -359,86 +351,49 @@ public class ExternalConsole extends JFrame {
                         last.setNext(current);
                         last = current;
 
-                        // console.append(input.getText());
-                        // console.append("\n");
-                        //println(input.getText());
-
                         inputStream.insertData((input.getText() + "\n").getBytes());
                         input.setText("");
-                        // event.finishedEvent();
                         EventManager.triggerEvent(event);
                     }
                 }
             }
         });
+        Consumer<Component> setDropTarget = (component) ->
+                component.setDropTarget(new DropTarget() {
+                    /**
+                     *
+                     */
+                    @Serial
+                    private static final long serialVersionUID = 1L;
 
-        input.setDropTarget(new DropTarget() {
-            /**
-             *
-             */
-            @Serial
-            private static final long serialVersionUID = 1L;
-
-            @SuppressWarnings("unchecked")
-            public void drop(DropTargetDropEvent evt) {
-                try {
-                    evt.acceptDrop(DnDConstants.ACTION_COPY);
-                    List<File> droppedFiles = (List<File>) evt
-                            .getTransferable().getTransferData(
-                                    DataFlavor.javaFileListFlavor);
-                    StringJoiner join = new StringJoiner(
-                            String.format("%s%s%s", QUOTE_CHAR, ARG_DIV_CHAR, QUOTE_CHAR),
-                            String.valueOf(QUOTE_CHAR),
-                            String.valueOf(QUOTE_CHAR));
-                    for (File file : droppedFiles) {
-                        join.add(file.getAbsolutePath());
+                    @SuppressWarnings("unchecked")
+                    public void drop(DropTargetDropEvent evt) {
+                        try {
+                            evt.acceptDrop(DnDConstants.ACTION_COPY);
+                            List<File> droppedFiles = (List<File>) evt
+                                    .getTransferable().getTransferData(
+                                            DataFlavor.javaFileListFlavor);
+                            StringJoiner join = new StringJoiner(
+                                    String.format("%s%s%s", QUOTE_CHAR, ARG_DIV_CHAR, QUOTE_CHAR),
+                                    String.valueOf(QUOTE_CHAR),
+                                    String.valueOf(QUOTE_CHAR));
+                            for (File file : droppedFiles) {
+                                join.add(file.getAbsolutePath());
+                            }
+                            StringBuilder build = new StringBuilder();
+                            build.append(input.getText());
+                            if (build.length() > 0 && build.charAt(build.length() - 1) != ARG_DIV_CHAR)
+                                build.append(ARG_DIV_CHAR);
+                            build.append(join);
+                            input.setText(build.toString());
+                            input.requestFocusInWindow();
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
                     }
-                    StringBuilder build = new StringBuilder();
-                    build.append(input.getText());
-                    if (build.length() > 0 && build.charAt(build.length() - 1) != ARG_DIV_CHAR)
-                        build.append(ARG_DIV_CHAR);
-                    build.append(join);
-                    input.setText(build.toString());
-                    input.requestFocusInWindow();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
-
-        screenConsole.getScreen().setDropTarget(new DropTarget() {
-            /**
-             *
-             */
-            @Serial
-            private static final long serialVersionUID = 1L;
-
-            @SuppressWarnings("unchecked")
-            public void drop(DropTargetDropEvent evt) {
-                try {
-                    evt.acceptDrop(DnDConstants.ACTION_COPY);
-                    List<File> droppedFiles = (List<File>) evt
-                            .getTransferable().getTransferData(
-                                    DataFlavor.javaFileListFlavor);
-                    StringJoiner join = new StringJoiner(
-                            String.format("%s%s%s", QUOTE_CHAR, ARG_DIV_CHAR, QUOTE_CHAR),
-                            String.valueOf(QUOTE_CHAR),
-                            String.valueOf(QUOTE_CHAR));
-                    for (File file : droppedFiles) {
-                        join.add(file.getAbsolutePath());
-                    }
-                    StringBuilder build = new StringBuilder();
-                    build.append(input.getText());
-                    if (build.length() > 0 && build.charAt(build.length() - 1) != ARG_DIV_CHAR)
-                        build.append(ARG_DIV_CHAR);
-                    build.append(join);
-                    input.setText(build.toString());
-                    input.requestFocusInWindow();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
+                });
+        setDropTarget.accept(input);
+        setDropTarget.accept(screenConsole.getScreen());
 
         messagePanel.add(input, BorderLayout.CENTER);
         return messagePanel;
@@ -707,6 +662,10 @@ public class ExternalConsole extends JFrame {
                     int result = Integer.MIN_VALUE;
                     try {
                         result = cmd.executeCommand(args);
+                        var resultMsg = cmd.resultMessage(result);
+                        if (resultMsg != null) {
+                            println(resultMsg);
+                        }
                     } catch (Throwable e) {
                         e.printStackTrace();
                         println(String.format("An error with %s %s has occurred", cmd.isProgram() ? "program" : "command", cmd.getCommand()));
@@ -731,8 +690,6 @@ public class ExternalConsole extends JFrame {
                     i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
                 }
                 input.setText("");
-                // input.setEditable(true);
-                // input.setEnabled(true);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {
@@ -740,7 +697,6 @@ public class ExternalConsole extends JFrame {
                 input.setEditable(true);
                 input.requestFocusInWindow();
             }
-            // });
         }).start();
     }
 
@@ -836,7 +792,6 @@ public class ExternalConsole extends JFrame {
     }
 
     public static void main(String[] args) {
-        // removeDemoCmds();
         setSystemStreams();
         registerEventListener(new Object() {
             @Handler

@@ -30,8 +30,7 @@ public class LoadVarsFileCommand implements ExternalConsoleCommand {
     @Override
     public int executeCommand(String... args) {
         if (args.length == 0 || Files.notExists(Path.of(args[0]))) {
-            ExternalConsole.println("File could not be loaded");
-            return -1;
+            return -2;
         }
         try {
             var json = new ObjectMapper().readTree(Paths.get(args[0]).toFile());
@@ -47,8 +46,17 @@ public class LoadVarsFileCommand implements ExternalConsoleCommand {
             e.printStackTrace();
             return -1;
         }
-        ExternalConsole.println("Vars loaded");
         return 0;
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            case -2 -> "File could not be loaded";
+            case 0 -> "Vars loaded";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 
 }

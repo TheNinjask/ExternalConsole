@@ -38,7 +38,6 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
     public int executeCommand(String... args) {
         Options options = new Options();
         OptionGroup scroll = new OptionGroup();
-        // scroll.setRequired(true);
         optionsMap.keySet().forEach(scroll::addOption);
         options.addOptionGroup(scroll);
         try {
@@ -61,7 +60,7 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
 
         } catch (ParseException e) {
             ExternalConsole.println(e.getMessage());
-            return 1;
+            return -1;
         }
         return 0;
     }
@@ -81,5 +80,13 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
     @Override
     public boolean accessibleInCode() {
         return true;
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result){
+            case -1 -> null;
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 }

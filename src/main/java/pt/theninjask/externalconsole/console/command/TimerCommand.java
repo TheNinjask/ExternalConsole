@@ -20,7 +20,6 @@ public class TimerCommand implements ExternalConsoleCommand {
     @Override
     public int executeCommand(String... args) {
         if (args.length == 0) {
-            ExternalConsole.println("Please provide the name of the command (and optionally its args)");
             return -1;
         }
         String cmdName = args[0];
@@ -28,8 +27,7 @@ public class TimerCommand implements ExternalConsoleCommand {
         long start = System.nanoTime();
         boolean exeRes = ExternalConsole.executeCommand(cmdName, cmdArgs);
         if (!exeRes) {
-            ExternalConsole.println("Command either not found or not accessible in code");
-            return -1;
+            return -2;
         }
         long stop = System.nanoTime();
         long time = stop - start;
@@ -58,6 +56,15 @@ public class TimerCommand implements ExternalConsoleCommand {
             return null;
         String[] cmdArgs = Arrays.copyOfRange(currArgs, 1, currArgs.length);
         return cmd.getParamOptions(number - 1, cmdArgs);
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "Please provide the name of the command (and optionally its args)";
+            case -2 -> "Command either not found or not accessible in code";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 
 }

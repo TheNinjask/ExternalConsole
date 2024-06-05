@@ -41,13 +41,4 @@ public class ViewVarCommand implements ExternalConsoleCommand {
     public String[] getParamOptions(int number, String[] currArgs) {
         return number == 0 ? console.getAllVars().keySet().toArray(String[]::new) : null;
     }
-
-    @Override
-    public String resultMessage(int result) {
-        return switch (result) {
-            case -1 -> "Provide args";
-            case 0 -> "Success";
-            default -> "Error unkown %s".formatted(result);
-        };
-    }
 }

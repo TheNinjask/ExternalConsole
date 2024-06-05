@@ -10,10 +10,20 @@ public interface ExternalConsoleCommand {
         return "N/A";
     }
 
+    /**
+     *
+     * @param args args
+     * @return standard >= 0: success, <0 error
+     */
     int executeCommand(String... args);
 
+    /**
+     *
+     * @param result int code from executeCommand
+     * @return null if there is no result message, string that corresponds to value returned by executeCommand
+     */
     default String resultMessage(int result) {
-        return "N/A";
+        return null;
     }
 
     /**

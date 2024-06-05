@@ -30,9 +30,7 @@ public class HelpCommand implements ExternalConsoleCommand {
         List<ExternalConsoleCommand> helpSorted = console._getAllCommands().values().stream()
                 .sorted(ExternalConsoleCommand.comparator).toList();
         for (ExternalConsoleCommand cmd : helpSorted) {
-            // int spacing = 4 + cmd.getCommand().length();
             ExternalConsole.println(String.format("\t%s - %s", cmd.getCommand(),
-                    // cmd.getDescription().replaceAll("\n", "\n\t" + " ".repeat(spacing))));
                     cmd.getDescription().replaceAll("\n", "\n\t\t")));
         }
         return 0;

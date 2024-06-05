@@ -140,7 +140,7 @@ public class TreeCommand implements ExternalConsoleCommand {
             }
         } catch (Exception e) {
             ExternalConsole.println(e.getMessage());
-            return 1;
+            return -1;
         }
         return 0;
     }
@@ -155,6 +155,14 @@ public class TreeCommand implements ExternalConsoleCommand {
                     .toList()
                     .toArray(new String[optionsMap.size()]);
             default -> null;
+        };
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
         };
     }
 

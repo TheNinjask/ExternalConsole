@@ -107,7 +107,7 @@ public class ThemeCommand implements ExternalConsoleCommand {
         } catch (ParseException e) {
             ExternalConsole.println(e.getMessage());
             cmd = null;
-            return 1;
+            return -1;
         }
         cmd = null;
         return 0;
@@ -136,6 +136,14 @@ public class ThemeCommand implements ExternalConsoleCommand {
     @Override
     public boolean accessibleInCode() {
         return true;
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 
 }

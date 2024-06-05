@@ -41,9 +41,17 @@ public class MakeDirectoryCommand implements ExternalConsoleCommand {
             }
         } catch (Exception e) {
             ExternalConsole.println(e);
-            return 1;
+            return -1;
         }
         return 0;
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 
 }

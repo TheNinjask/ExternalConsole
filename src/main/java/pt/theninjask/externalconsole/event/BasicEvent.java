@@ -13,10 +13,6 @@ public abstract class BasicEvent implements Event {
 
     private final boolean isCancellable;
 
-    //private boolean isFinished;
-
-    //private List<Runnable> afterEvent;
-
     public BasicEvent() {
         this(BasicEvent.class.getSimpleName(), true);
     }
@@ -34,8 +30,6 @@ public abstract class BasicEvent implements Event {
         this.name = name;
         this.cancelled = new AtomicBoolean();
         this.isCancellable = isCancellable;
-        //this.afterEvent = new ArrayList<>();
-        //this.isFinished = false;
     }
 
     public String getName() {
@@ -58,19 +52,5 @@ public abstract class BasicEvent implements Event {
     public boolean isCancellable() {
         return isCancellable;
     }
-
-	/*public synchronized void addAfterEvent(Runnable run) {
-		if (isFinished)
-			run.run();
-		else
-			afterEvent.add(run);
-	}*/
-
-	/*public synchronized void finishedEvent() {
-		isFinished = true;
-		afterEvent.forEach(run -> {
-			run.run();
-		});
-	}*/
 
 }

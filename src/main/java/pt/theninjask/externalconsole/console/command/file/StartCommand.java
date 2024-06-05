@@ -34,7 +34,7 @@ public class StartCommand implements ExternalConsoleCommand {
             }
         } catch (Exception e) {
             ExternalConsole.println(e);
-            return 1;
+            return -1;
         }
         return 0;
     }
@@ -44,6 +44,14 @@ public class StartCommand implements ExternalConsoleCommand {
         return switch (number) {
             case 0 -> ChangeDirectoryCommand.getCurrentDir().toFile().list();
             default -> null;
+        };
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
         };
     }
 }

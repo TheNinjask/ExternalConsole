@@ -45,7 +45,7 @@ public class ChangeDirectoryCommand implements ExternalConsoleCommand {
             }
         } catch (Exception e) {
             ExternalConsole.println(e);
-            return 1;
+            return -1;
         }
         return 0;
     }
@@ -55,6 +55,14 @@ public class ChangeDirectoryCommand implements ExternalConsoleCommand {
         return switch (number) {
             case 0 -> currentDir.toFile().list((dir, name) -> new File(dir, name).isDirectory());
             default -> null;
+        };
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
         };
     }
 

@@ -26,10 +26,7 @@ public class ScreenConsole extends JScrollPane {
         this.autoScroll = true;
         screen = new JTextPane();
         screen.setEditorKit(new WrapEditorKit());
-        // console.setBorder(null);
-        // console.setTabSize(4);
         screen.setEditable(false);
-        // console.setLineWrap(true);
         DefaultCaret caret = (DefaultCaret) screen.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         this.setViewportView(screen);
@@ -38,12 +35,10 @@ public class ScreenConsole extends JScrollPane {
         this.setBorder(null);
         this.setWheelScrollingEnabled(true);
         this.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        // scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
         this.setOpaque(false);
         this.getViewport().setOpaque(false);
         screen.setOpaque(false);
-        // console.setForeground(Color.BLACK);
 
         JScrollPane scroll = this;
         this.addComponentListener(new ComponentAdapter() {

@@ -48,9 +48,9 @@ public class SetVarCommand implements ExternalConsoleCommand {
     @Override
     public String resultMessage(int result) {
         return switch (result) {
-            case -1 -> "Provide args";
-            case 0 -> "Success";
-            default -> "Error unkown %s".formatted(result);
+            case -1 -> "Provide Valid Args";
+            case 0 -> "Vars set";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
         };
     }
 

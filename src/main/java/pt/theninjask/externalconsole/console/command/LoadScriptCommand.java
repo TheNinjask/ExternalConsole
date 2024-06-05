@@ -25,8 +25,7 @@ public class LoadScriptCommand implements ExternalConsoleCommand {
     @Override
     public int executeCommand(String... args) {
         if (args.length == 0 || Files.notExists(Path.of(args[0]))) {
-            ExternalConsole.println("File could not be loaded");
-            return -1;
+            return -2;
         }
         try {
             var json = new ObjectMapper().readTree(Paths.get(args[0]).toFile());
@@ -39,7 +38,6 @@ public class LoadScriptCommand implements ExternalConsoleCommand {
             e.printStackTrace();
             return -1;
         }
-        ExternalConsole.println("Script executed");
         return 0;
     }
 
@@ -59,5 +57,15 @@ public class LoadScriptCommand implements ExternalConsoleCommand {
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
         return ExternalConsoleCommand.super.getParamOptions(number, currArgs);
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result) {
+            case 0 -> "Script executed";
+            case -1 -> "An exception has occurred!";
+            case -2 -> "File could not be loaded";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 }

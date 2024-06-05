@@ -54,10 +54,11 @@ public class JythonProgram implements ExternalConsoleCommand {
                 this.jython = null;
             }
             ExternalConsole.executeCommand("cls");
+            ExternalConsole.println("Leaving Jython Interpreter ...");
         } catch (Exception e) {
             e.printStackTrace();
+            return -1;
         }
-        ExternalConsole.println("Leaving Jython Interpreter ...");
         return 0;
     }
 
@@ -76,6 +77,14 @@ public class JythonProgram implements ExternalConsoleCommand {
     @SuppressWarnings("unchecked")
     public String[] getParamOptions(int number, String[] currArgs) {
         return isRunning ? (String[]) ((PyStringMap) jython.getLocals()).keys().stream().map(Object::toString).filter(e -> filterLocalsForParam((String) e)).toArray(String[]::new) : null;
+    }
+
+    @Override
+    public String resultMessage(int result) {
+        return switch (result){
+            case -1 -> "An exception has occurred!";
+            default -> ExternalConsoleCommand.super.resultMessage(result);
+        };
     }
 
 }
