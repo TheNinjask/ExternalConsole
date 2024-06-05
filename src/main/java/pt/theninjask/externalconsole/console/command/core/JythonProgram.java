@@ -65,6 +65,10 @@ public class JythonProgram implements ExternalConsoleCommand {
         return true;
     }
 
+    public boolean accessibleInCode() {
+        return true;
+    }
+
     private boolean filterLocalsForParam(String local) {
         return !local.startsWith("__") || !local.endsWith("__");
     }
