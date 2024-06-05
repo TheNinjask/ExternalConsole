@@ -636,13 +636,13 @@ public class ExternalConsole extends JFrame {
     private static ExternalConsoleCommand program = null;
 
     @Handler
-    public void onCommand(InputCommandExternalConsoleEvent event) {
+    public Thread onCommand(InputCommandExternalConsoleEvent event) {
         if (isProgramRunning.get())
-            return;
+            return null;
         println(argsToInput(event.getArgs()));
         inputStream.consumeAll();
         // To not lock weirdly the ExternalConsole
-        new Thread(() -> {
+        var cmdThread = new Thread(() -> {
             try {
                 input.setEditable(false);
                 input.setEnabled(false);
@@ -697,7 +697,9 @@ public class ExternalConsole extends JFrame {
                 input.setEditable(true);
                 input.requestFocusInWindow();
             }
-        }).start();
+        });
+        cmdThread.start();
+        return cmdThread;
     }
 
     public ExternalConsoleOutputStream getOutputStream() {
