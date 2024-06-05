@@ -7,14 +7,17 @@ import pt.theninjask.externalconsole.console.command.file.ChangeDirectoryCommand
 
 import java.io.PrintWriter;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 public class CurlyCommand implements ExternalConsoleCommand {
 
@@ -54,8 +57,14 @@ public class CurlyCommand implements ExternalConsoleCommand {
             .build();
 
     private final Option headersOpt = Option.builder("h")
-            .longOpt("headers")
+            .longOpt("header")
             .desc("Set request's headers (comes in pairs)")
+            .hasArgs()
+            .build();
+
+    private final Option queryOpt = Option.builder("q")
+            .longOpt("query")
+            .desc("Set request's query params (comes in pairs)")
             .hasArgs()
             .build();
 
@@ -106,6 +115,10 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         Map.entry(
                                 statusOpt,
                                 () -> null
+                        ),
+                        Map.entry(
+                                queryOpt,
+                                () -> new String[]{"key", "value"}
                         )
                 );
     }
@@ -139,9 +152,20 @@ public class CurlyCommand implements ExternalConsoleCommand {
                 printHelp();
                 return 0;
             }
-
+            var url = cmd.getOptionValue(urlOpt.getOpt());
+            if (cmd.hasOption(queryOpt.getOpt())) {
+                var queryOptValues = cmd.getOptionValues(queryOpt.getOpt());
+                var queryParamsAsString = IntStream.range(0, queryOptValues.length)
+                        .filter(i -> i % 2 == 0)
+                        .mapToObj(i -> "%s=%s".formatted(queryOptValues[i], i + 1 < queryOptValues.length ? queryOptValues[i + 1] : ""))
+                        .reduce("%s&%s"::formatted)
+                        .orElse("");
+                url = url.concat("?%s".formatted(
+                        URLEncoder.encode(queryParamsAsString, StandardCharsets.UTF_8)
+                ));
+            }
             var preRequest = HttpRequest.newBuilder()
-                    .uri(new URI(cmd.getOptionValue(urlOpt.getOpt())))
+                    .uri(new URI(url))
                     .method(cmd.getOptionValue(methodOpt.getOpt()),
                             cmd.hasOption(bodyOpt.getOpt()) ?
                                     HttpRequest.BodyPublishers.ofString(

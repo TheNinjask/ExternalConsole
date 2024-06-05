@@ -122,14 +122,14 @@ public class ExternalConsole extends JFrame {
             try {
                 return clazz.getDeclaredConstructor(ExternalConsole.class).newInstance(this);
             } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
-                     | InvocationTargetException | SecurityException e) {
+                    | InvocationTargetException | SecurityException e) {
                 return null;
             }
         }, (clazz) -> {
             try {
                 return clazz.getDeclaredConstructor().newInstance();
             } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
-                     | InvocationTargetException | SecurityException e) {
+                    | InvocationTargetException | SecurityException e) {
                 return null;
             }
         });
