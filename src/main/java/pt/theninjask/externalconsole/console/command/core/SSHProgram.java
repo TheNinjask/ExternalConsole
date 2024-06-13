@@ -21,6 +21,9 @@ public class SSHProgram implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
 
+    private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
+            () -> !(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_D));
+
     public SSHProgram(ExternalConsole console) {
         this.console = console;
     }
@@ -70,7 +73,7 @@ public class SSHProgram implements ExternalConsoleCommand {
             channel.connect();
             String input;
             Channel finalChannel = channel;
-            while ((input = getInput(read, () -> !finalChannel.isConnected())) != null) {
+            while ((input = getInput(read, () -> DEFAULT_INPUT_LOOP.get() && finalChannel.isConnected())) != null) {
                 pipe.write("%s\n".formatted(input)
                         .getBytes());
             }
@@ -93,14 +96,13 @@ public class SSHProgram implements ExternalConsoleCommand {
         ExternalConsole.println("Leaving EC's SSH ...");
         return 0;
     }
+
     private String getInput(BufferedReader read) throws IOException, HaltException {
-        return getInput(read, () -> false);
+        return getInput(read, DEFAULT_INPUT_LOOP);
     }
-    private String getInput(BufferedReader read, Supplier<Boolean> additionalHalter) throws IOException, HaltException {
-        while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_D))) {
-            if (additionalHalter.get()) {
-                throw new HaltException();
-            }
+
+    private String getInput(BufferedReader read, Supplier<Boolean> inputLoop) throws IOException, HaltException {
+        while (inputLoop.get()) {
             String str;
             if ((str = read.readLine()) != null)
                 return str;
