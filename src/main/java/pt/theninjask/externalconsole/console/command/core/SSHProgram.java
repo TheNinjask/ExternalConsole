@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.core;
 
+import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
@@ -10,6 +11,7 @@ import java.awt.event.KeyEvent;
 import java.io.*;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
 
@@ -67,7 +69,8 @@ public class SSHProgram implements ExternalConsoleCommand {
             channel.setInputStream(new PipedInputStream(pipe));
             channel.connect();
             String input;
-            while ((input = getInput(read)) != null) {
+            Channel finalChannel = channel;
+            while ((input = getInput(read, () -> !finalChannel.isConnected())) != null) {
                 pipe.write("%s\n".formatted(input)
                         .getBytes());
             }
@@ -90,9 +93,14 @@ public class SSHProgram implements ExternalConsoleCommand {
         ExternalConsole.println("Leaving EC's SSH ...");
         return 0;
     }
-
     private String getInput(BufferedReader read) throws IOException, HaltException {
+        return getInput(read, () -> false);
+    }
+    private String getInput(BufferedReader read, Supplier<Boolean> additionalHalter) throws IOException, HaltException {
         while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_D))) {
+            if (additionalHalter.get()) {
+                throw new HaltException();
+            }
             String str;
             if ((str = read.readLine()) != null)
                 return str;
