@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
@@ -21,6 +22,7 @@ import pt.theninjask.externalconsole.stream.RedirectorInputStream;
 import pt.theninjask.externalconsole.stream.RedirectorOutputStream;
 import pt.theninjask.externalconsole.util.ColorTheme;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
+import pt.theninjask.externalconsole.util.Utils;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
@@ -44,6 +46,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.logging.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class ExternalConsole extends JFrame {
@@ -725,6 +729,88 @@ public class ExternalConsole extends JFrame {
 
     public void setInputStream(ExternalConsoleInputStream inputStream) {
         this.inputStream = inputStream;
+    }
+
+    public static void loadObjectAsCommand(Object object) {
+        loadObjectAsCommand(object, false, false);
+    }
+
+
+    public static void loadObjectAsCommand(Object object, boolean includeOthers, boolean accessibleInCode) {
+        Class<?> clazz = object.getClass();
+        Arrays.stream(clazz.getDeclaredMethods())
+                .filter(m -> includeOthers || (!m.getName().startsWith("$") && !m.getName().startsWith("lambda")))
+                .forEach(m ->
+                        ExternalConsole.addCommand(
+                                new ExternalConsoleCommand() {
+                                    @Override
+                                    public String getCommand() {
+                                        return "%s.%s".formatted(clazz.getSimpleName(), m.getName());
+                                    }
+
+                                    @Override
+                                    public String getDescription() {
+                                        return "%s.%s%s".formatted(
+                                                clazz.getSimpleName(),
+                                                m.getName(),
+                                                Arrays.stream(m.getParameterTypes())
+                                                        .map(Class::getSimpleName)
+                                                        .collect(Collectors.joining(",", "(", ")"))
+                                        );
+                                    }
+
+                                    @Override
+                                    public boolean accessibleInCode() {
+                                        return accessibleInCode;
+                                    }
+
+                                    @Override
+                                    public int executeCommand(String... args) {
+                                        try {
+                                            Object[] mArgs = new Object[m.getParameterCount()];
+                                            IntStream.range(0, m.getParameterCount())
+                                                    .forEach(pi -> {
+                                                        try {
+                                                            mArgs[pi] = Utils.MAPPER.readValue(args[pi], m.getParameterTypes()[pi]);
+                                                        } catch (JsonProcessingException e) {
+                                                            e.printStackTrace();
+                                                        }
+                                                    });
+                                            m.trySetAccessible();
+                                            var result = m.invoke(object, mArgs);
+                                            if (!m.getReturnType().isInstance(void.class)) {
+                                                ExternalConsole.println(Utils.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(result));
+                                            }
+                                            return 0;
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                            return -1;
+                                        }
+                                    }
+
+                                    @Override
+                                    public String[] getParamOptions(int number, String[] currArgs) {
+                                        if (number >= m.getParameterTypes().length) {
+                                            return null;
+                                        }
+                                        return new String[]{
+                                                "%s (%s)".formatted(
+                                                        m.getParameters()[number].getName(),
+                                                        m.getParameterTypes()[number].getSimpleName()
+                                                )
+                                        };
+                                    }
+
+                                    @Override
+                                    public String resultMessage(int result) {
+                                        return switch (result) {
+                                            case -1 -> "An exception has occurred!";
+                                            default -> ExternalConsoleCommand.super.resultMessage(result);
+                                        };
+                                    }
+                                }
+                        )
+                );
     }
 
     private static class EventManager {
