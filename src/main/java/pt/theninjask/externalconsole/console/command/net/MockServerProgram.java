@@ -67,6 +67,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
             .desc("Set literal to match path for mocking")
             .numberOfArgs(1)
             .build();
+
+    private final Option mockUrlOpt = Option.builder("m")
+            .longOpt("mock-url")
+            .desc("Set endpoint for doing mocking")
+            .numberOfArgs(1)
+            .build();
     private static HttpServer server = null;
 
 
@@ -125,6 +131,10 @@ public class MockServerProgram implements ExternalConsoleCommand {
                         Map.entry(
                                 literalOpt,
                                 () -> null
+                        ),
+                        Map.entry(
+                                mockUrlOpt,
+                                () -> new String[]{"http://", "https://", "https://serebii.net", "https://github.com/TheNinjask/ExternalConsole"}
                         )
                 );
     }
@@ -175,11 +185,16 @@ public class MockServerProgram implements ExternalConsoleCommand {
                     .map(Option::getOpt)
                     .map(cmd::getOptionValue)
                     .orElse(null);
+            String mockUrl = Optional.of(mockUrlOpt)
+                    .map(Option::getOpt)
+                    .map(cmd::getOptionValue)
+                    .orElse(null);
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/", new MockHandler(
                     url,
                     literal,
-                    regex
+                    regex,
+                    mockUrl
             ));
             server.setExecutor(null); // Default executor
             ExternalConsole.setClosable(false);
@@ -270,17 +285,21 @@ public class MockServerProgram implements ExternalConsoleCommand {
         private final String literal;
         private final Pattern regex;
 
+        private final String mockUrl;
+
         private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
                 () -> !(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_C));
 
         public MockHandler(
                 String url,
                 String literal,
-                String regex
+                String regex,
+                String mockUrl
         ) {
             this.url = url;
             this.literal = literal;
             this.regex = regex == null ? null : Pattern.compile(regex);
+            this.mockUrl = mockUrl;
         }
 
         @Override
@@ -288,9 +307,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
             try {
 
                 if (isToMock(exchange)) {
-                    handleMock(exchange);
+                    if (mockUrl == null)
+                        handleMock(exchange);
+                    else
+                        handleRedirect(exchange, mockUrl);
                 } else {
-                    handleRedirect(exchange);
+                    handleRedirect(exchange, url);
                 }
 
 
@@ -389,9 +411,10 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
 
         private void handleRedirect(
-                HttpExchange exchange
+                HttpExchange exchange,
+                String targetHost
         ) throws IOException {
-            String targetUrl = url + exchange.getRequestURI();
+            String targetUrl = targetHost + exchange.getRequestURI();
             ExternalConsole.println("Forwarding request to: " + targetUrl);
 
             URL url = new URL(targetUrl);
