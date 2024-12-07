@@ -108,7 +108,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 .ofEntries(
                         Map.entry(
                                 urlOpt,
-                                () -> new String[]{"http://", "https://", "https://serebii.net/"}
+                                () -> new String[]{"http://", "https://", "https://serebii.net", "https://github.com/TheNinjask/ExternalConsole"}
                         ),
                         Map.entry(
                                 portOpt,
