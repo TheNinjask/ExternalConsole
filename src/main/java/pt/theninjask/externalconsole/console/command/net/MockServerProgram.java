@@ -182,6 +182,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                     regex
             ));
             server.setExecutor(null); // Default executor
+            ExternalConsole.setClosable(false);
             ExternalConsole.println("Mock Server Activated (CTRL+C to stop)");
             server.start();
             while ((!KeyPressedAdapter.isKeyPressed(
@@ -195,17 +196,18 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 server.stop(0);
                 server = null;
                 ExternalConsole.println("Mock Server Deactivated");
-                return 0;
             }
+            ExternalConsole.setClosable(true);
+            return 0;
         } catch (Exception e) {
             String msg = e.getMessage();
             if (e instanceof NoSuchElementException) {
                 msg = "--url is required (%s)".formatted(msg);
             }
             ExternalConsole.println(msg);
+            ExternalConsole.setClosable(true);
             return -1;
         }
-        return 0;
     }
 
     @Override
