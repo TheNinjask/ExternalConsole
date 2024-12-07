@@ -422,7 +422,7 @@ public class ExternalConsole extends JFrame {
         return String.join(" ", args);
     }
 
-    private String[] inputToArgs(String input) {
+    public String[] inputToArgs(String input) {
         return inputToArgs(input, false);
     }
 
@@ -430,7 +430,7 @@ public class ExternalConsole extends JFrame {
     public static final char QUOTE_CHAR = '\"';
     public static final char ARG_DIV_CHAR = ' ';
 
-    private String[] inputToArgs(String input, boolean emptyLast) {
+    public String[] inputToArgs(String input, boolean emptyLast) {
         if (emptyLast)
             input = input.stripLeading();
         else
@@ -488,7 +488,7 @@ public class ExternalConsole extends JFrame {
                 .toArray(String[]::new);
     }
 
-    private String argsToInput(String[] args) {
+    public String argsToInput(String[] args) {
         StringBuilder input = new StringBuilder();
         for (String string : args) {
             if (string.indexOf(QUOTE_CHAR) != -1)
