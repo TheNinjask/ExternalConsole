@@ -305,7 +305,10 @@ public class MockServerProgram implements ExternalConsoleCommand {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             try {
-
+                if ("OPTIONS".equals(exchange.getRequestMethod())) {
+                    handleOptions(exchange);
+                    return;
+                }
                 if (isToMock(exchange)) {
                     if (mockUrl == null)
                         handleMock(exchange);
@@ -320,6 +323,13 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 ExternalConsole.println(ExceptionUtils.getStackTrace(e));
                 throw e;
             }
+        }
+
+        private void handleOptions(HttpExchange exchange) throws IOException {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+            exchange.sendResponseHeaders(200, -1);
         }
 
         private boolean isToMock(HttpExchange exchange) {
@@ -447,20 +457,28 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
             byte[] responseBody = responseStream.readAllBytes();
 
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().putAll(connection.getHeaderFields());
             exchange.getResponseHeaders().remove(null);
-            boolean isChunked = Optional.ofNullable(
-                            connection.getHeaderFields().get("Transfer-Encoding"))
+            boolean isChunked = connection.getHeaderFields()
+                    .entrySet()
+                    .stream()
+                    .filter(entry -> "Transfer-Encoding".equalsIgnoreCase(entry.getKey()))
+                    .map(Map.Entry::getValue)
+                    .findFirst()
                     .orElse(Collections.emptyList())
                     .stream()
                     .filter(Objects::nonNull)
                     .map(String::toLowerCase)
                     .anyMatch(s -> Objects.equals(s, "chunked"));
 
-            exchange.sendResponseHeaders(responseCode, isChunked ? 0 : responseBody.length);
+            exchange.sendResponseHeaders(responseCode,
+                    responseCode == 204 ? -1 :
+                            isChunked ? 0 : responseBody.length);
 
             os = exchange.getResponseBody();
-            os.write(responseBody);
+            if (responseBody.length > 0)
+                os.write(responseBody);
             os.close();
         }
 
