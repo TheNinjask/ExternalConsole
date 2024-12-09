@@ -12,10 +12,10 @@ import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import pt.theninjask.externalconsole.event.ExternalConsoleClosingEvent;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
 
-import javax.net.ssl.HttpsURLConnection;
 import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.reflect.Modifier;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.nio.file.Files;
@@ -428,7 +428,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
             ExternalConsole.println("Forwarding request to: " + targetUrl);
 
             URL url = new URL(targetUrl);
-            HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod(exchange.getRequestMethod());
             connection.setDoInput(true);
 
