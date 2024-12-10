@@ -305,6 +305,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
             try {
+                exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
                 if ("OPTIONS".equals(exchange.getRequestMethod())) {
                     handleOptions(exchange);
                     return;
@@ -326,7 +327,6 @@ public class MockServerProgram implements ExternalConsoleCommand {
         }
 
         private void handleOptions(HttpExchange exchange) throws IOException {
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD");
             exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
             exchange.sendResponseHeaders(200, -1);
@@ -457,7 +457,6 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
             byte[] responseBody = responseStream.readAllBytes();
 
-            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
             exchange.getResponseHeaders().putAll(connection.getHeaderFields());
             exchange.getResponseHeaders().remove(null);
             boolean isChunked = connection.getHeaderFields()
