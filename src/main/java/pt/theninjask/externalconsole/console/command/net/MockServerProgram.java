@@ -28,6 +28,7 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
 
@@ -446,9 +447,16 @@ public class MockServerProgram implements ExternalConsoleCommand {
                     );
 
             exchange.getRequestHeaders().forEach((key, values) -> {
-                for (String value : values) {
-                    requestBuilder.setHeader(key, value);
-                }
+                if (!List.of(
+                        "connection",
+                        "host"
+                ).contains(key.toLowerCase()))
+                    requestBuilder.headers(
+                            Stream.concat(
+                                            Stream.of(key),
+                                            values.stream())
+                                    .toArray(String[]::new)
+                    );
             });
 
             HttpResponse<byte[]> response = HttpClient.newHttpClient()
@@ -458,11 +466,16 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
             byte[] responseBody = response.body();
 
-            exchange.getResponseHeaders().putAll(response.headers().map());
+            var responseHeaders = new HashMap<>(response.headers().map());
+            responseHeaders.keySet()
+                    .stream()
+                    .filter("Access-Control-Allow-Origin"::equalsIgnoreCase)
+                    .findFirst()
+                    .ifPresent(responseHeaders::remove);
+
+            exchange.getResponseHeaders().putAll(responseHeaders);
             exchange.getResponseHeaders().remove(null);
-            boolean isChunked = response.headers()
-                    .map()
-                    .entrySet()
+            boolean isChunked = responseHeaders.entrySet()
                     .stream()
                     .filter(entry -> "Transfer-Encoding".equalsIgnoreCase(entry.getKey()))
                     .map(Map.Entry::getValue)
