@@ -449,7 +449,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
             exchange.getRequestHeaders().forEach((key, values) -> {
                 if (!List.of(
                         "connection",
-                        "host"
+                        "host",
+                        "content-length"
                 ).contains(key.toLowerCase()))
                     requestBuilder.headers(
                             Stream.concat(
