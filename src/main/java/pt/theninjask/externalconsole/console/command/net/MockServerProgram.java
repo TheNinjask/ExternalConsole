@@ -159,7 +159,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
     @Override
     public String getDescription() {
-        return "External Console version of curl";
+        return "Simple program to help mock requests to a server";
     }
 
     @Override
