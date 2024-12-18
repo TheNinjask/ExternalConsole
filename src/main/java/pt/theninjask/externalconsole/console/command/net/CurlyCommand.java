@@ -80,6 +80,13 @@ public class CurlyCommand implements ExternalConsoleCommand {
             .hasArg(false)
             .build();
 
+    private final Option printOpt = Option.builder("p")
+            .longOpt("print")
+            .desc("Flag to print request's response")
+            .hasArg(false)
+            .build();
+
+
     public CurlyCommand(ExternalConsole console) {
         this.console = console;
         this.optionsMap = Map
@@ -119,6 +126,10 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         Map.entry(
                                 queryOpt,
                                 () -> new String[]{"key", "value"}
+                        ),
+                        Map.entry(
+                                printOpt,
+                                () -> null
                         )
                 );
     }
@@ -190,7 +201,8 @@ public class CurlyCommand implements ExternalConsoleCommand {
             if (cmd.hasOption(dumpOpt.getOpt())) {
                 var fileToDump = ChangeDirectoryCommand.getCurrentDir().resolve(cmd.getOptionValue(dumpOpt.getOpt()));
                 Files.writeString(fileToDump, response.body());
-            } else {
+            }
+            if (cmd.hasOption(printOpt.getOpt())) {
                 ExternalConsole.println(response.body());
             }
             ExternalConsole.triggerEvent(
