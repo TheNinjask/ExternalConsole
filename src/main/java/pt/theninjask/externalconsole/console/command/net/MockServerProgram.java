@@ -17,13 +17,18 @@ import java.io.*;
 import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
 
@@ -154,7 +159,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
     @Override
     public String getDescription() {
-        return "External Console version of curl";
+        return "Simple program to help mock requests to a server";
     }
 
     @Override
@@ -320,9 +325,9 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 }
 
 
-            } catch (IOException e) {
+            } catch (IOException | URISyntaxException | InterruptedException e) {
                 ExternalConsole.println(ExceptionUtils.getStackTrace(e));
-                throw e;
+                throw new IOException(e);
             }
         }
 
@@ -423,44 +428,55 @@ public class MockServerProgram implements ExternalConsoleCommand {
         private void handleRedirect(
                 HttpExchange exchange,
                 String targetHost
-        ) throws IOException {
+        ) throws IOException, URISyntaxException, InterruptedException {
             String targetUrl = targetHost + exchange.getRequestURI();
             ExternalConsole.println("Forwarding request to: " + targetUrl);
 
             URL url = new URL(targetUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(exchange.getRequestMethod());
-            connection.setDoInput(true);
-
-            exchange.getRequestHeaders().forEach((key, values) -> {
-                for (String value : values) {
-                    connection.setRequestProperty(key, value);
-                }
-            });
-            OutputStream os;
-            if (List.of(
+            var hasBody = List.of(
                     "POST",
                     "PUT",
                     "PATCH"
-            ).contains(exchange.getRequestMethod().toUpperCase())) {
-                byte[] requestBody = exchange.getRequestBody().readAllBytes();
-                connection.setDoOutput(true);
-                os = connection.getOutputStream();
-                os.write(requestBody);
-                os.close();
-            }
+            ).contains(exchange.getRequestMethod().toUpperCase());
 
-            int responseCode = connection.getResponseCode();
-            InputStream responseStream = (responseCode < 400)
-                    ? connection.getInputStream()
-                    : connection.getErrorStream();
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(url.toURI())
+                    .method(exchange.getRequestMethod(),
+                            hasBody ? HttpRequest.BodyPublishers.ofByteArray(exchange.getRequestBody().readAllBytes())
+                                    : HttpRequest.BodyPublishers.noBody()
+                    );
 
-            byte[] responseBody = responseStream.readAllBytes();
+            exchange.getRequestHeaders().forEach((key, values) -> {
+                if (!List.of(
+                        "connection",
+                        "host",
+                        "content-length"
+                ).contains(key.toLowerCase()))
+                    requestBuilder.headers(
+                            Stream.concat(
+                                            Stream.of(key),
+                                            values.stream())
+                                    .toArray(String[]::new)
+                    );
+            });
 
-            exchange.getResponseHeaders().putAll(connection.getHeaderFields());
+            HttpResponse<byte[]> response = HttpClient.newHttpClient()
+                    .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());
+
+            int responseCode = response.statusCode();
+
+            byte[] responseBody = response.body();
+
+            var responseHeaders = new HashMap<>(response.headers().map());
+            responseHeaders.keySet()
+                    .stream()
+                    .filter("Access-Control-Allow-Origin"::equalsIgnoreCase)
+                    .findFirst()
+                    .ifPresent(responseHeaders::remove);
+
+            exchange.getResponseHeaders().putAll(responseHeaders);
             exchange.getResponseHeaders().remove(null);
-            boolean isChunked = connection.getHeaderFields()
-                    .entrySet()
+            boolean isChunked = responseHeaders.entrySet()
                     .stream()
                     .filter(entry -> "Transfer-Encoding".equalsIgnoreCase(entry.getKey()))
                     .map(Map.Entry::getValue)
@@ -475,7 +491,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                     responseCode == 204 ? -1 :
                             isChunked ? 0 : responseBody.length);
 
-            os = exchange.getResponseBody();
+            OutputStream os = exchange.getResponseBody();
             if (responseBody.length > 0)
                 os.write(responseBody);
             os.close();
