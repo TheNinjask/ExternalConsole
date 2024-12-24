@@ -5,6 +5,7 @@ import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.file.ChangeDirectoryCommand;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -15,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
@@ -53,6 +55,12 @@ public class CurlyCommand implements ExternalConsoleCommand {
     private final Option bodyOpt = Option.builder("b")
             .longOpt("body")
             .desc("Set request's body path")
+            .numberOfArgs(1)
+            .build();
+
+    private final Option bodyStringOpt = Option.builder("t")
+            .longOpt("text-body")
+            .desc("Set request's body")
             .numberOfArgs(1)
             .build();
 
@@ -109,6 +117,10 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         ),
                         Map.entry(
                                 bodyOpt,
+                                () -> new String[]{"body"}
+                        ),
+                        Map.entry(
+                                bodyStringOpt,
                                 () -> new String[]{"body"}
                         ),
                         Map.entry(
@@ -177,18 +189,25 @@ public class CurlyCommand implements ExternalConsoleCommand {
                         queryParamsAsString
                 ));
             }
+
+            var optionalBody = Optional.of(bodyOpt.getOpt())
+                    .filter(cmd::hasOption)
+                    .map(opt -> {
+                        try {
+                            return new String(Files.readAllBytes(Paths.get(cmd.getOptionValue(opt))));
+                        } catch (IOException e) {
+                            return null;
+                        }
+                    })
+                    .or(() -> Optional.of(bodyStringOpt.getOpt())
+                            .filter(cmd::hasOption)
+                            .map(cmd::getOptionValue));
+
             var preRequest = HttpRequest.newBuilder()
                     .uri(new URI(url))
                     .method(cmd.getOptionValue(methodOpt.getOpt()),
-                            cmd.hasOption(bodyOpt.getOpt()) ?
-                                    HttpRequest.BodyPublishers.ofString(
-                                            new String(
-                                                    Files.readAllBytes(
-                                                            Paths.get(
-                                                                    cmd.getOptionValue(bodyOpt.getOpt())
-                                                            )))
-                                    ) :
-                                    HttpRequest.BodyPublishers.noBody());
+                            optionalBody.map(HttpRequest.BodyPublishers::ofString)
+                                    .orElse(HttpRequest.BodyPublishers.noBody()));
             if (cmd.hasOption(headersOpt.getOpt())) {
                 preRequest = preRequest.headers(cmd.getOptionValues(headersOpt.getOpt()));
             }
