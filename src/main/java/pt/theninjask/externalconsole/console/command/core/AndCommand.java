@@ -43,7 +43,8 @@ public class AndCommand implements ExternalConsoleAllCommandConsumerCommand {
                     .forEachOrdered(i -> eventArgs[i] = console.parseArgsVars(it.next())[0]);
             var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(
                     console,
-                    eventArgs
+                    eventArgs,
+                    true
             ));
             try {
                 if (cmdThread != null)

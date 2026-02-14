@@ -10,7 +10,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 
-import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
+import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressedNative;
 
 public class JythonProgram implements ExternalConsoleCommand {
 
@@ -45,7 +45,7 @@ public class JythonProgram implements ExternalConsoleCommand {
                 this.jython = jython;
                 this.isRunning = true;
                 console.println("Jython 2.7.3 (CTRL+Z to exit)");
-                while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_Z))) {
+                while (!(isKeyPressedNative(KeyEvent.VK_CONTROL) && isKeyPressedNative(KeyEvent.VK_Z))) {
                     String str;
                     if ((str = read.readLine()) != null)
                         jython.push(str);

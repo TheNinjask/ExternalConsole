@@ -3,7 +3,12 @@ package pt.theninjask.externalconsole.event;
 import net.engio.mbassy.listener.Handler;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
@@ -12,7 +17,7 @@ import java.util.function.Consumer;
  */
 public class EventHandler {
 
-    private final Map<Class<? extends BasicEvent>, Collection<Pair<Object, Consumer<BasicEvent>>>> listeners = new HashMap<>();
+    private final Map<Class<? extends BasicEvent>, Map<Integer, List<Pair<Object, Consumer<BasicEvent>>>>> listeners = new HashMap<>();
 
     private static final EventHandler singleton = new EventHandler();
 
@@ -25,27 +30,37 @@ public class EventHandler {
             Object owner,
             Consumer<T> listener
     ) {
-        listeners.computeIfAbsent(eventClass, k -> new ArrayList<>())
-                .add(Pair.of(owner, (Consumer<BasicEvent>) listener));
+        registerListener(eventClass, owner, listener, 0);
+    }
+
+    public <T extends BasicEvent> void registerListener(
+            Class<T> eventClass,
+            Object owner,
+            Consumer<T> listener,
+            int priority
+    ) {
+        Map<Integer, List<Pair<Object, Consumer<BasicEvent>>>> prioMap = listeners.computeIfAbsent(eventClass, k -> new ConcurrentHashMap<>() {
+        });
+        List<Pair<Object, Consumer<BasicEvent>>> list = prioMap.computeIfAbsent(priority, k -> new CopyOnWriteArrayList<>());
+        list.add(0, Pair.of(owner, (Consumer<BasicEvent>) listener));
     }
 
     public void unregisterListener(
             Class<? extends BasicEvent> eventClass,
             Object owner
     ) {
-        listeners.computeIfPresent(eventClass, (k, v) -> {
-            v.removeIf(p -> p.getKey() == owner);
-            return v;
-        });
+        Map<Integer, List<Pair<Object, Consumer<BasicEvent>>>> prioMap = listeners.getOrDefault(eventClass, Collections.emptyMap());
+        prioMap.values()
+                .forEach(collection -> collection.removeIf(pair -> pair.getKey() == owner));
     }
 
     public void genericOnEvent(BasicEvent event) {
-        listeners.getOrDefault(
-                        event.getClass(),
-                        Collections.emptyList())
-                .forEach(p -> p.getValue()
-                        .accept(event));
-
+        Map<Integer, List<Pair<Object, Consumer<BasicEvent>>>> prioMap = listeners.getOrDefault(event.getClass(), Collections.emptyMap());
+        prioMap.entrySet()
+                .stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(Map.Entry::getValue)
+                .forEach(v -> v.forEach(pair -> pair.getValue().accept(event)));
     }
 
     @Handler

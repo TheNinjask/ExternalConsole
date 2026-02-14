@@ -9,6 +9,7 @@ import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.listener.Handler;
 import org.jnativehook.GlobalScreen;
+import org.jnativehook.keyboard.NativeKeyEvent;
 import org.reflections.Reflections;
 import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.TimerCommand;
@@ -110,7 +111,6 @@ public class ExternalConsole extends JFrame {
         this.setTitle("External Console");
 
         if (isMain) {
-            KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyPressedAdapter());
             RedirectorOutputStream.changeRedirect(System.out);
             RedirectorOutputStream.changeDefault(System.out);
             System.setOut(RedirectorOutputStream.getInstance());
@@ -156,16 +156,27 @@ public class ExternalConsole extends JFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent windowEvent) {
-                eventManager.triggerEvent(new ExternalConsoleClosingEvent(console, isClosable()));
-                if (!isMain)
-                    dispose();
+                eventManager.triggerEvent(new ExternalConsoleClosingEvent(console, console.isClosable()));
             }
         });
 
-        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
+        this.setLocationRelativeToCenter(0, 0);
 
         initialCommandsLoad();
+    }
+
+    public void setLocationRelativeToCenter(
+            int xOffset,
+            int yOffset
+    ) {
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        int finalX = dim.width / 2 - this.getSize().width / 2 + xOffset;
+        int finalY = dim.height / 2 - this.getSize().height / 2 + yOffset;
+        finalX = Math.max(finalX, 0);
+        finalX = Math.min(finalX, dim.width - this.getSize().width);
+        finalY = Math.max(finalY, 0);
+        finalY = Math.min(finalY, dim.height - this.getSize().height);
+        this.setLocation(finalX, finalY);
     }
 
     private void initialCommandsLoad() {
@@ -257,7 +268,7 @@ public class ExternalConsole extends JFrame {
         return ecmd.accessibleInCode() ? ecmd : null;
     }
 
-    public Map<String, ExternalConsoleCommand> _getAllCommands() {
+    public Map<String, ExternalConsoleCommand> getAllCommands() {
         return Collections.unmodifiableMap(cmds);
     }
 
@@ -316,7 +327,7 @@ public class ExternalConsole extends JFrame {
                     case KeyEvent.VK_TAB -> {
                         String[] args = inputToArgs(input.getText(), true);
                         ExternalConsoleCommand cmd = isProgramRunning.get() ? program : cmds.get(args[0]);
-                        boolean next = !KeyPressedAdapter.isKeyPressed(KeyEvent.VK_SHIFT);
+                        boolean next = !KeyPressedAdapter.isKeyPressedNative(NativeKeyEvent.SHIFT_MASK);
                         if (ref == null) {
                             ref = args[args.length - 1];
                         }
@@ -661,7 +672,7 @@ public class ExternalConsole extends JFrame {
 
     @Handler
     public Thread onCommand(InputCommandExternalConsoleEvent event) {
-        if (isProgramRunning.get())
+        if (event.getOwner() != this || isProgramRunning.get())
             return null;
         println(argsToInput(event.getArgs()));
         inputStream.consumeAll();
@@ -709,6 +720,8 @@ public class ExternalConsole extends JFrame {
                 }
                 int i = 3;
                 while (proc.isAlive() && !isProgramRunning.get()) {
+                    if(event.isDisableLoadingBar())
+                        continue;
                     input.setText(String.format("Processing %s", loading[i]));
                     proc.join((int) loading[1]);
                     i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
@@ -878,12 +891,10 @@ public class ExternalConsole extends JFrame {
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
-        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-        logger.setLevel(Level.OFF);
         setSystemStreams();
         addCloseHandlingAsMain();
         ExternalConsole.getSingleton().setViewable(true);
+        ExternalConsole.getSingleton().setClosable(true);
         parseArgsAsMain(args);
     }
 
@@ -903,11 +914,14 @@ public class ExternalConsole extends JFrame {
                         ExternalConsoleClosingEvent.class,
                         ExternalConsole.getSingleton(),
                         event -> {
-                            if (event.getOwner() != ExternalConsole.getSingleton())
+                            if (event.getOwner() != ExternalConsole.getSingleton() || !event.isClosable())
                                 return;
                             ExternalConsole.getSingleton().dispose();
+                            ExternalConsole.getSingleton().getEventManager().unregisterEventListener(ExternalConsole.getSingleton());
+                            ExternalConsole.getSingleton().getEventManager().unregisterEventListener(EventHandler.getInstance());
                             System.exit(0);
-                        }
+                        },
+                        Integer.MIN_VALUE
                 );
     }
 

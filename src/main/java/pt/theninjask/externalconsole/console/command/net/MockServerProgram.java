@@ -31,8 +31,6 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
-
 public class MockServerProgram implements ExternalConsoleCommand {
 
     private final ExternalConsole console;
@@ -98,18 +96,11 @@ public class MockServerProgram implements ExternalConsoleCommand {
             return;
         Optional.ofNullable(server)
                 .ifPresent(svr -> svr.stop(0));
-        EventHandler.getInstance()
-                .unregisterListener(
-                        ExternalConsoleClosingEvent.class,
-                        this
-                );
     }
 
     public MockServerProgram(ExternalConsole console) {
 
         this.console = console;
-
-        console.registerEventListener(this);
 
         contentTypes = Arrays.stream(MediaType.class.getDeclaredFields())
                 .filter(field -> {
@@ -197,7 +188,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 .registerListener(
                         ExternalConsoleClosingEvent.class,
                         this,
-                        this::onClose
+                        this::onClose,
+                        0
                 );
         Options options = new Options();
         optionsMap.keySet().forEach(options::addOption);
@@ -217,14 +209,10 @@ public class MockServerProgram implements ExternalConsoleCommand {
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/", new MockHandler(mockHandlerArgs));
             server.setExecutor(null); // Default executor
-            console.setClosable(false);
+            //console.setClosable(false);
             console.println("Mock Server Activated (CTRL+C to stop)");
             server.start();
-            while ((!KeyPressedAdapter.isKeyPressed(
-                    KeyEvent.VK_CONTROL
-            ) || !KeyPressedAdapter.isKeyPressed(
-                    KeyEvent.VK_C
-            ) && server != null)) {
+            while (!KeyPressedAdapter.isCTRLAndCPressedNative() && server != null){
                 // Program Loop
             }
             if (server != null) {
@@ -232,7 +220,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 server = null;
                 console.println("Mock Server Deactivated");
             }
-            console.setClosable(true);
+            EventHandler.getInstance()
+                    .unregisterListener(
+                            ExternalConsoleClosingEvent.class,
+                            this
+                    );
+            //console.setClosable(true);
             return 0;
         } catch (Exception e) {
             String msg = e.getMessage();
@@ -240,7 +233,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 msg = "--url is required (%s)".formatted(msg);
             }
             console.println(msg);
-            console.setClosable(true);
+            //console.setClosable(true);
+            EventHandler.getInstance()
+                    .unregisterListener(
+                            ExternalConsoleClosingEvent.class,
+                            this
+                    );
             return -1;
         }
     }
@@ -361,7 +359,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
         private final String overrideCookie;
 
         private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
-                () -> !(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_C));
+                () -> !KeyPressedAdapter.isCTRLAndCPressedNative();
 
         public MockHandler(
                 MockHandlerArgs args

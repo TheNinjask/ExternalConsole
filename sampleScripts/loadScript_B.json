@@ -1,0 +1,62 @@
+[
+  {
+    "cmd": "loadVarsFile",
+    "args": [
+      "./sampleScripts/loadVarsFile_1.json"
+    ]
+  },
+  {
+    "cmd": "multiple-ec-manager",
+    "args": [
+      "--fun",
+      "mockserver",
+      "6",
+      "--url",
+      "https://www.google.com",
+      "--port",
+      "8080",
+      "--override-token",
+      "Bearer token",
+      "mockserver",
+      "6",
+      "--url",
+      "https://www.google.com",
+      "--port",
+      "8081",
+      "--override-token",
+      "Bearer token",
+      "mockserver",
+      "6",
+      "--url",
+      "https://www.google.com",
+      "--port",
+      "8081",
+      "--override-token",
+      "Bearer token",
+      "mockserver",
+      "6",
+      "--url",
+      "https://www.google.com",
+      "--port",
+      "8081",
+      "--override-token",
+      "Bearer token",
+      "mockserver",
+      "6",
+      "--url",
+      "https://www.google.com",
+      "--port",
+      "8084",
+      "--override-token",
+      "Bearer token",
+      "mockserver",
+      "6",
+      "--url",
+      "https://www.google.com",
+      "--port",
+      "8085",
+      "--override-token",
+      "Bearer token"
+    ]
+  }
+]
