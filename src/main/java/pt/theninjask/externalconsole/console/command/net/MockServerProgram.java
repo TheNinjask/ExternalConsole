@@ -35,7 +35,7 @@ import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
 
 public class MockServerProgram implements ExternalConsoleCommand {
 
-    private static ExternalConsole console;
+    private final ExternalConsole console;
 
     private static HintType hintType = HintType.NONE;
 
@@ -95,6 +95,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
 
     public MockServerProgram(ExternalConsole console) {
+
+        this.console = console;
         console.registerEventListener(new Object() {
             @Handler
             public void onClose(ExternalConsoleClosingEvent event) {
@@ -127,7 +129,6 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 })
                 .toArray(String[]::new);
 
-        MockServerProgram.console = console;
         this.optionsMap = Map
                 .ofEntries(
                         Map.entry(
@@ -257,6 +258,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 .map(cmd::getOptionValue)
                 .orElse(null);
         return MockHandlerArgs.builder()
+                .console(console)
                 .url(url)
                 .literal(literal)
                 .regex(regex)
@@ -322,6 +324,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
     @Getter
     @Builder
     static class MockHandlerArgs {
+        private ExternalConsole console;
         private String url;
         private String literal;
         private String regex;
@@ -333,6 +336,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
     // Custom handler that catches ALL requests to any path
     static class MockHandler implements HttpHandler {
 
+        private final ExternalConsole console;
         private final String url;
         private final String literal;
         private final Pattern regex;
@@ -349,6 +353,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
         public MockHandler(
                 MockHandlerArgs args
         ) {
+            this.console = args.getConsole();
             this.url = args.getUrl();
             this.literal = args.getLiteral();
             this.regex = args.getRegex() == null ? null : Pattern.compile(args.getRegex());

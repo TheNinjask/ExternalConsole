@@ -138,34 +138,6 @@ public class ExternalConsole extends JFrame {
         this.cmds = new HashMap<>();
         this.vars = new HashMap<>();
 
-        Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
-        List<Class<? extends ExternalConsoleCommand>> cmds = reflections.getSubTypesOf(ExternalConsoleCommand.class)
-                .stream().toList();
-        List<LoadingExternalConsoleCommand> op = Arrays.asList((clazz) -> {
-            try {
-                return clazz.getDeclaredConstructor(ExternalConsole.class).newInstance(this);
-            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
-                     | InvocationTargetException | SecurityException e) {
-                return null;
-            }
-        }, (clazz) -> {
-            try {
-                return clazz.getDeclaredConstructor().newInstance();
-            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
-                     | InvocationTargetException | SecurityException e) {
-                return null;
-            }
-        });
-        for (Class<? extends ExternalConsoleCommand> cmd : cmds) {
-            for (LoadingExternalConsoleCommand loadingExternalConsoleCommand : op) {
-                ExternalConsoleCommand load = loadingExternalConsoleCommand.getCommand(cmd);
-                if (load != null) {
-                    addCommand(load);
-                    break;
-                }
-            }
-        }
-
         this.last = UsedCommand.NULL_UC;
 
         this.screenConsole.getScreen().setForeground(currentTheme.font());
@@ -188,6 +160,40 @@ public class ExternalConsole extends JFrame {
 
         eventManager = new EventManager(this);
         eventManager.registerEventListener(this);
+
+        initialCommandsLoad();
+    }
+
+    private void initialCommandsLoad() {
+        Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
+        List<Class<? extends ExternalConsoleCommand>> cmds = reflections.getSubTypesOf(ExternalConsoleCommand.class)
+                .stream().toList();
+        List<LoadingExternalConsoleCommand> op = Arrays.asList((clazz) -> {
+            try {
+                return clazz.getDeclaredConstructor(ExternalConsole.class).newInstance(this);
+            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
+                     | InvocationTargetException | SecurityException e) {
+                return null;
+            }
+        }, (clazz) -> {
+            try {
+                return clazz.getDeclaredConstructor().newInstance();
+            } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | IllegalArgumentException
+                     | InvocationTargetException | SecurityException e) {
+                return null;
+            }
+        });
+        for (Class<? extends ExternalConsoleCommand> cmd : cmds) {
+            for (LoadingExternalConsoleCommand loadingExternalConsoleCommand : op) {
+                ExternalConsoleCommand load = loadingExternalConsoleCommand.getCommand(cmd);
+                if (load != null) {
+                    if (load instanceof ExternalConsoleAllCommandConsumerCommand allCommandConsumer)
+                        allCommandConsumer.consumeCommandMapReference(this.cmds);
+                    addCommand(load);
+                    break;
+                }
+            }
+        }
     }
 
     public boolean _getAutoScroll() {
