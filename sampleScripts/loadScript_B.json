@@ -8,7 +8,7 @@
   {
     "cmd": "multiple-ec-manager",
     "args": [
-      "--fun",
+      "--fun-circle",
       "mockserver",
       "6",
       "--url",

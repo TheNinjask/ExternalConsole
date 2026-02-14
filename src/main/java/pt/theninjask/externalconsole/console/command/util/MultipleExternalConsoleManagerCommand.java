@@ -37,8 +37,10 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
 
     @Override
     public int executeCommand(String... args) {
-        boolean funMode = args.length > 0 && args[0].equalsIgnoreCase("--fun");
-        boolean circleMode = args.length > 0 && args[0].equalsIgnoreCase("--circle");
+        boolean funMode = args.length > 0 &&
+                (args[0].equalsIgnoreCase("--fun") || args[0].equalsIgnoreCase("--fun-circle"));
+        boolean circleMode = args.length > 0 &&
+                (args[0].equalsIgnoreCase("--circle") || args[0].equalsIgnoreCase("--fun-circle"));
         var it = !funMode && !circleMode ? Arrays.stream(args).iterator() :
                 Arrays.stream(Arrays.copyOfRange(args, 1, args.length)).iterator();
         List<Pair<ExternalConsole, InputCommandExternalConsoleEvent>> otherConsoles = new ArrayList<>();
@@ -76,11 +78,19 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
             var c = p.getKey();
             var cmd = p.getValue();
             Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-            if (funMode) {
+            if (funMode && !circleMode) {
                 c.setLocationRelativeToCenter(
                         ThreadLocalRandom.current().nextInt(-dim.width / 2, dim.width / 2),
                         ThreadLocalRandom.current().nextInt(-dim.height / 2, dim.height / 2)
                 );
+            } else if (circleMode) {
+                int radius = Math.min(dim.width, dim.height) / 4;
+                double angle = 2 * Math.PI * otherConsoles.indexOf(p) / otherConsoles.size();
+                c.setLocationRelativeToCenter(
+                        (int) (radius * Math.cos(angle)),
+                        (int) (radius * Math.sin(angle))
+                );
+
             }
             c.setClosable(true);
             c.setViewable(true);
@@ -92,6 +102,23 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
             if (otherConsoles.stream().map(Pair::getKey).noneMatch(ExternalConsole::isDisplayable))
                 break;
             // loop until all consoles are closed
+
+
+            if (circleMode && funMode) {
+                Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+                int radius = Math.min(dim.width, dim.height) / 4;
+                double time = System.currentTimeMillis() / 1000.0; // Time in seconds
+
+                for (int i = 0; i < otherConsoles.size(); i++) {
+                    Pair<ExternalConsole, InputCommandExternalConsoleEvent> p = otherConsoles.get(i);
+                    ExternalConsole c = p.getKey();
+                    double angle = 2 * Math.PI * i / otherConsoles.size() + time; // Dynamic angle
+                    c.setLocationRelativeToCenter(
+                            (int) (radius * Math.cos(angle)),
+                            (int) (radius * Math.sin(angle))
+                    );
+                }
+            }
         }
         otherConsoles.stream().map(Pair::getKey).forEach(Window::dispose);
         EventHandler.getInstance()
@@ -110,7 +137,7 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
         if (currArgs.length > 0) {
-            if (Set.of("--fun", "--circle").stream().anyMatch(currArgs[0]::equals))
+            if (Set.of("--fun", "--circle", "--fun-circle").stream().anyMatch(currArgs[0]::equals))
                 currArgs = Arrays.copyOfRange(currArgs, 1, currArgs.length);
         }
         return AndCommand.getParamOptions(getAllCommands(), number, currArgs);
