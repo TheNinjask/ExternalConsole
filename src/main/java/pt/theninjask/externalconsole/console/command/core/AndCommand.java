@@ -33,12 +33,15 @@ public class AndCommand implements ExternalConsoleCommand {
             var argSize = Integer.parseInt(it.next());
             var eventArgs = new String[argSize + 1];
             eventArgs[0] = cmd;
-            IntStream.range(1, argSize + 1).forEachOrdered(i -> eventArgs[i] = it.next());
+
+            IntStream.range(1, argSize + 1)
+                    .forEachOrdered(i -> eventArgs[i] = console.parseArgsVars(it.next())[0]);
             var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(
                     eventArgs
             ));
             try {
-                cmdThread.join();
+                if (cmdThread != null)
+                    cmdThread.join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 return -1;
@@ -81,19 +84,17 @@ public class AndCommand implements ExternalConsoleCommand {
             }
             number++;
         }
-        switch (nextType) {
-            default:
-            case CMD:
-                return null;
-            case ARGS_AMOUNT:
-                return IntStream.range(0, 10).mapToObj(Integer::toString).toArray(String[]::new);
-            case CMD_ARGS:
+        return switch (nextType) {
+            default -> null;
+            case ARGS_AMOUNT -> IntStream.range(0, 10).mapToObj(Integer::toString).toArray(String[]::new);
+            case CMD_ARGS -> {
                 var cmd = console._getAllCommands().getOrDefault(lastCmd, null);
-                return cmd == null ? null :
+                yield cmd == null ? null :
                         cmd.getParamOptions(
                                 lastCmdCurrentNumber,
                                 Arrays.copyOfRange(currArgs, lastCmdNumberIndex + 1, currArgs.length));
-        }
+            }
+        };
     }
 
     @Override

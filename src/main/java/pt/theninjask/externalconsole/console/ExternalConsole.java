@@ -483,7 +483,7 @@ public class ExternalConsole extends JFrame {
         return parseArgsVars(args);
     }
 
-    private String[] parseArgsVars(String[] args) {
+    public String[] parseArgsVars(String... args) {
         return Arrays.stream(args)
                 .map(argy -> vars.getOrDefault(argy, argy))
                 .toArray(String[]::new);

@@ -4,14 +4,25 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
+import pt.theninjask.externalconsole.event.InputCommandExternalConsoleEvent;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public class LoadScriptCommand implements ExternalConsoleCommand {
+
+    private final ExternalConsole console;
+
+    public LoadScriptCommand(ExternalConsole console) {
+        this.console = console;
+    }
+
     @Override
     public String getCommand() {
         return "loadScript";
@@ -32,25 +43,34 @@ public class LoadScriptCommand implements ExternalConsoleCommand {
             if (json.isObject()) {
                 executeJsonObject(json);
             } else if (json.isArray()) {
-                json.elements().forEachRemaining(this::executeJsonObject);
+                for (Iterator<JsonNode> it = json.elements(); it.hasNext(); ) {
+                    var e = it.next();
+                    executeJsonObject(e);
+                }
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             return -1;
         }
         return 0;
     }
 
-    private void executeJsonObject(JsonNode json) {
+    private void executeJsonObject(JsonNode json) throws InterruptedException {
         if (json.isObject()) {
-            ExternalConsole.executeCommand(
-                    json.get("cmd").asText(),
-                    StreamSupport.stream(
-                                    ((Iterable<JsonNode>)
-                                            (() -> json.get("args").elements())).spliterator(), true)
-                            .map(jsonNode -> jsonNode.isObject() || jsonNode.isArray() ? jsonNode.toString() : jsonNode.asText())
-                            .toArray(String[]::new)
-            );
+            String cmd = json.get("cmd").asText();
+            String[] args = StreamSupport.stream(
+                            ((Iterable<JsonNode>)
+                                    (() -> json.get("args").elements())).spliterator(), true)
+                    .map(jsonNode -> jsonNode.isObject() || jsonNode.isArray() ? jsonNode.toString() : jsonNode.asText())
+                    .toArray(String[]::new);
+            args = console.parseArgsVars(args);
+            String[] eventArgs = Stream.concat(
+                            Stream.of(cmd),
+                            Arrays.stream(args))
+                    .toArray(String[]::new);
+            var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(eventArgs));
+            if (cmdThread != null)
+                cmdThread.join();
         }
     }
 
