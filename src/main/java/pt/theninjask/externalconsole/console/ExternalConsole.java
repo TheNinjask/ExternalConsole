@@ -1,12 +1,15 @@
 package pt.theninjask.externalconsole.console;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import lombok.Getter;
+import lombok.Setter;
 import net.engio.mbassy.bus.MBassador;
 import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.listener.Handler;
 import org.jnativehook.GlobalScreen;
+import org.jnativehook.keyboard.NativeKeyEvent;
 import org.reflections.Reflections;
 import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.TimerCommand;
@@ -66,10 +69,16 @@ public class ExternalConsole extends JFrame {
 
     public static final ColorTheme DAY_THEME = new ColorTheme("Day", Color.BLACK, Color.WHITE);
 
+    @Setter
+    @Getter
     private ExternalConsoleOutputStream outputStream;
 
+    @Setter
+    @Getter
     private ExternalConsoleErrorOutputStream errorOutputStream;
 
+    @Setter
+    @Getter
     private ExternalConsoleInputStream inputStream;
 
     private JPanel messagePanel;
@@ -86,23 +95,34 @@ public class ExternalConsole extends JFrame {
 
     private ScreenConsole screenConsole;
 
-    private static final ExternalConsole singleton = new ExternalConsole();
+    @Getter
+    private final EventManager eventManager;
 
-    private ExternalConsole() {
+    @Getter
+    private static final ExternalConsole singleton = new ExternalConsole(true);
+
+    // this generates another console and breaks the singleton pattern,
+    // but it is needed for the multiple console manager program
+    public ExternalConsole generateAnotherConsole() {
+        return new ExternalConsole(false);
+    }
+
+    private ExternalConsole(boolean isMain) {
         this.setTitle("External Console");
 
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyPressedAdapter());
-        RedirectorOutputStream.changeRedirect(System.out);
-        RedirectorOutputStream.changeDefault(System.out);
-        System.setOut(RedirectorOutputStream.getInstance());
+        if (isMain) {
+            RedirectorOutputStream.changeRedirect(System.out);
+            RedirectorOutputStream.changeDefault(System.out);
+            System.setOut(RedirectorOutputStream.getInstance());
 
-        RedirectorErrorOutputStream.changeRedirect(System.err);
-        RedirectorErrorOutputStream.changeDefault(System.err);
-        System.setErr(RedirectorErrorOutputStream.getInstance());
+            RedirectorErrorOutputStream.changeRedirect(System.err);
+            RedirectorErrorOutputStream.changeDefault(System.err);
+            System.setErr(RedirectorErrorOutputStream.getInstance());
 
-        RedirectorInputStream.changeRedirect(System.in);
-        RedirectorInputStream.changeDefault(System.in);
-        System.setIn(RedirectorInputStream.getInstance());
+            RedirectorInputStream.changeRedirect(System.in);
+            RedirectorInputStream.changeDefault(System.in);
+            System.setIn(RedirectorInputStream.getInstance());
+        }
 
         this.currentTheme = NIGHT_THEME;
         this.setMinimumSize(new Dimension(300, 300));
@@ -118,6 +138,48 @@ public class ExternalConsole extends JFrame {
         this.cmds = new HashMap<>();
         this.vars = new HashMap<>();
 
+        this.last = UsedCommand.NULL_UC;
+
+        this.screenConsole.getScreen().setForeground(currentTheme.font());
+        this.setBackground(currentTheme.background());
+
+        this.input.setBorder(BorderFactory.createLineBorder(currentTheme.font(), 1));
+        this.input.setForeground(currentTheme.font());
+        this.input.setCaretColor(currentTheme.font());
+        this.input.setBackground(currentTheme.background());
+
+        eventManager = new EventManager(this);
+        eventManager.registerEventListener(this);
+        eventManager.registerEventListener(EventHandler.getInstance());
+
+        ExternalConsole console = this;
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                eventManager.triggerEvent(new ExternalConsoleClosingEvent(console, console.isClosable()));
+            }
+        });
+
+        this.setLocationRelativeToCenter(0, 0);
+
+        initialCommandsLoad();
+    }
+
+    public void setLocationRelativeToCenter(
+            int xOffset,
+            int yOffset
+    ) {
+        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+        int finalX = dim.width / 2 - this.getSize().width / 2 + xOffset;
+        int finalY = dim.height / 2 - this.getSize().height / 2 + yOffset;
+        finalX = Math.max(finalX, 0);
+        finalX = Math.min(finalX, dim.width - this.getSize().width);
+        finalY = Math.max(finalY, 0);
+        finalY = Math.min(finalY, dim.height - this.getSize().height);
+        this.setLocation(finalX, finalY);
+    }
+
+    private void initialCommandsLoad() {
         Reflections reflections = new Reflections("pt.theninjask.externalconsole.console.command");
         List<Class<? extends ExternalConsoleCommand>> cmds = reflections.getSubTypesOf(ExternalConsoleCommand.class)
                 .stream().toList();
@@ -140,33 +202,13 @@ public class ExternalConsole extends JFrame {
             for (LoadingExternalConsoleCommand loadingExternalConsoleCommand : op) {
                 ExternalConsoleCommand load = loadingExternalConsoleCommand.getCommand(cmd);
                 if (load != null) {
-                    _addCommand(load);
+                    if (load instanceof ExternalConsoleAllCommandConsumerCommand allCommandConsumer)
+                        allCommandConsumer.consumeCommandMapReference(this.cmds);
+                    addCommand(load);
                     break;
                 }
             }
         }
-
-        this.last = UsedCommand.NULL_UC;
-
-        this.screenConsole.getScreen().setForeground(currentTheme.font());
-        this.setBackground(currentTheme.background());
-
-        this.input.setBorder(BorderFactory.createLineBorder(currentTheme.font(), 1));
-        this.input.setForeground(currentTheme.font());
-        this.input.setCaretColor(currentTheme.font());
-        this.input.setBackground(currentTheme.background());
-
-        this.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent windowEvent) {
-                EventManager.triggerEvent(new ExternalConsoleClosingEvent(isClosable()));
-            }
-        });
-
-        Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-        this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
-
-        EventManager.registerEventListener(this);
     }
 
     public boolean _getAutoScroll() {
@@ -185,84 +227,70 @@ public class ExternalConsole extends JFrame {
         return screenConsole;
     }
 
-    public static boolean isViewable() {
-        return singleton.isVisible();
+    public boolean isViewable() {
+        return isVisible();
     }
 
-    public static void setViewable(boolean b) {
-        SetViewableEvent event = new SetViewableEvent(b);
-        EventManager.triggerEvent(event);
+    public void setViewable(boolean b) {
+        SetViewableEvent event = new SetViewableEvent(this, b);
+        eventManager.triggerEvent(event);
         if (event.isCancelled())
             return;
-        singleton.setVisible(b);
+        setVisible(b);
     }
 
-    public static boolean isClosable() {
-        return singleton.getDefaultCloseOperation() >= JFrame.DISPOSE_ON_CLOSE;
+    public boolean isClosable() {
+        return getDefaultCloseOperation() >= JFrame.DISPOSE_ON_CLOSE;
     }
 
-    public static void setClosable(boolean b) {
-        SetClosableEvent event = new SetClosableEvent(b);
-        EventManager.triggerEvent(event);
+    public void setClosable(boolean b) {
+        SetClosableEvent event = new SetClosableEvent(this, b);
+        eventManager.triggerEvent(event);
         if (event.isCancelled())
             return;
         if (b)
-            singleton.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         else
-            singleton.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+            setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
     }
 
-    public void _addCommand(ExternalConsoleCommand newCmd) {
+    public void addCommand(ExternalConsoleCommand newCmd) {
         cmds.put(newCmd.getCommand(), newCmd);
     }
 
-    public static void addCommand(ExternalConsoleCommand newCmd) {
-        singleton._addCommand(newCmd);
+
+    public void removeCommand(String cmd) {
+        cmds.remove(cmd);
     }
 
-    public static void removeCommand(String cmd) {
-        singleton.cmds.remove(cmd);
-    }
-
-    public static ExternalConsoleCommand getCommand(String cmd) {
-        ExternalConsoleCommand ecmd = singleton.cmds.get(cmd);
+    public ExternalConsoleCommand getCommand(String cmd) {
+        ExternalConsoleCommand ecmd = cmds.get(cmd);
         return ecmd.accessibleInCode() ? ecmd : null;
     }
 
-    public Map<String, ExternalConsoleCommand> _getAllCommands() {
-        return cmds;
+    public Map<String, ExternalConsoleCommand> getAllCommands() {
+        return Collections.unmodifiableMap(cmds);
     }
 
     public Map<String, String> getAllVars() {
         return vars;
     }
 
-    public static List<ExternalConsoleCommand> getAllCommands() {
-        return singleton.cmds.values().parallelStream().filter(ExternalConsoleCommand::accessibleInCode).toList();
-    }
-
-    public static List<String> getAllCommandsAsString() {
-        return getAllCommandsAsString(true);
-    }
-
-    public static List<String> getAllCommandsAsString(boolean onlyAccessibleInCode) {
-        return singleton.cmds.values().parallelStream().filter(p -> p.accessibleInCode() || !onlyAccessibleInCode)
-                .map(ExternalConsoleCommand::getCommand).toList();
-    }
-
-    public static boolean executeCommand(String cmd, String... args) {
-        ExternalConsoleCommand ecmd = singleton.cmds.get(cmd);
-        if (ecmd == null || !ecmd.accessibleInCode() || isProgramRunning.get())
+    public boolean executeCommand(String cmd, String... args) {
+        ExternalConsoleCommand ecmd = cmds.get(cmd);
+        if (ecmd == null || !ecmd.accessibleInCode())
             return false;
-        args = singleton.parseArgsVars(args);
+        if (ecmd.isProgram() && isProgramRunning.get())
+            return false;
+        args = parseArgsVars(args);
         int result = ecmd.executeCommand(args);
-        EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(ecmd, args, result));
+        eventManager.triggerEvent(new AfterCommandExecutionExternalConsole(this, ecmd, args, result));
         return true;
     }
 
-    public static void removeDemoCmds() {
-        for (ExternalConsoleCommand cmd : singleton.cmds.values().stream().filter(ExternalConsoleCommand::isDemo).toList()) {
-            singleton.cmds.remove(cmd.getCommand());
+    public void removeDemoCmds() {
+        for (ExternalConsoleCommand cmd : cmds.values().stream().filter(ExternalConsoleCommand::isDemo).toList()) {
+            cmds.remove(cmd.getCommand());
         }
     }
 
@@ -272,6 +300,7 @@ public class ExternalConsole extends JFrame {
         input.setBorder(null);
 
         input.setFocusTraversalKeysEnabled(false);
+        ExternalConsole console = this;
         input.addKeyListener(new KeyListener() {
 
             private int tabPos = -1;
@@ -298,7 +327,7 @@ public class ExternalConsole extends JFrame {
                     case KeyEvent.VK_TAB -> {
                         String[] args = inputToArgs(input.getText(), true);
                         ExternalConsoleCommand cmd = isProgramRunning.get() ? program : cmds.get(args[0]);
-                        boolean next = !KeyPressedAdapter.isKeyPressed(KeyEvent.VK_SHIFT);
+                        boolean next = !KeyPressedAdapter.isKeyPressedNative(NativeKeyEvent.SHIFT_MASK);
                         if (ref == null) {
                             ref = args[args.length - 1];
                         }
@@ -347,6 +376,7 @@ public class ExternalConsole extends JFrame {
                     }
                     case KeyEvent.VK_ENTER -> {
                         InputCommandExternalConsoleEvent event = new InputCommandExternalConsoleEvent(
+                                console,
                                 inputToArgs(input.getText()));
                         while (last.getNext() != UsedCommand.NULL_UC)
                             last = last.getNext();
@@ -358,7 +388,7 @@ public class ExternalConsole extends JFrame {
 
                         inputStream.insertData((input.getText() + "\n").getBytes());
                         input.setText("");
-                        EventManager.triggerEvent(event);
+                        eventManager.triggerEvent(event);
                     }
                 }
             }
@@ -504,53 +534,52 @@ public class ExternalConsole extends JFrame {
         return input.toString().stripTrailing();
     }
 
-    public static void setConsoleTitle(String title) {
-        singleton.setTitle(title);
+    public void setConsoleTitle(String title) {
+        setTitle(title);
     }
 
-    public static void setIcon(URL iconPath) {
+    public void setIcon(URL iconPath) {
         ImageIcon icon = new ImageIcon(iconPath);
-        singleton.setIconImage(icon.getImage());
+        setIconImage(icon.getImage());
     }
 
-    public static void setTheme(ColorTheme theme) {
-        singleton.currentTheme = theme;
-        singleton.screenConsole.getScreen().setForeground(theme.font());
-        singleton.setBackground(theme.background());
+    public void setTheme(ColorTheme theme) {
+        currentTheme = theme;
+        screenConsole.getScreen().setForeground(theme.font());
+        setBackground(theme.background());
 
-        singleton.input.setBorder(BorderFactory.createLineBorder(theme.font(), 1));
-        singleton.input.setForeground(theme.font());
-        singleton.input.setCaretColor(theme.font());
-        singleton.input.setBackground(theme.background());
+        input.setBorder(BorderFactory.createLineBorder(theme.font(), 1));
+        input.setForeground(theme.font());
+        input.setCaretColor(theme.font());
+        input.setBackground(theme.background());
     }
 
-    public static void println() {
+    public void println() {
         println("");
         /*
-         * try { StyledDocument doc = singleton.console.getStyledDocument();
-         * doc.insertString(doc.getLength(), "\n", null); if (singleton.autoScroll)
-         * singleton.console.setCaretPosition(doc.getLength()); //
-         * singleton.console.append("\n"); singleton.scroll.repaint();
-         * singleton.scroll.revalidate(); } catch (BadLocationException e) {
+         * try { StyledDocument doc = console.getStyledDocument();
+         * doc.insertString(doc.getLength(), "\n", null); if (autoScroll)
+         * console.setCaretPosition(doc.getLength()); //
+         * console.append("\n"); scroll.repaint();
+         * scroll.revalidate(); } catch (BadLocationException e) {
          * e.printStackTrace(); }
          */
     }
 
-    public static void println(Object msg) {
-        println(msg.toString());
+    public void println(Object msg) {
+        println(Objects.toString(msg));
     }
 
-    public static void println(String msg) {
-        singleton.screenConsole.println(msg);
+    public void println(String msg) {
+        screenConsole.println(msg);
     }
-
 
     public void _clearExtraLines() throws BadLocationException {
         screenConsole._clearExtraLines();
     }
 
-    public static ColorTheme getTheme() {
-        return singleton.currentTheme;
+    public ColorTheme getTheme() {
+        return currentTheme;
     }
 
     public static void setSystemStreams() {
@@ -565,31 +594,31 @@ public class ExternalConsole extends JFrame {
         RedirectorInputStream.changeRedirectToDefault();
     }
 
-    public static void enableEventManagerLogging(boolean val) {
-        EventManager.enableLogging(val);
+    public void enableEventManagerLogging(boolean val) {
+        eventManager.enableLogging(val);
     }
 
-    public static boolean isEnableEventManagerLogging() {
-        return EventManager.isEnableLogging();
+    public boolean isEnableEventManagerLogging() {
+        return eventManager.isEnableLogging();
     }
 
-    public static void registerEventListener(Object listener) {
-        EventManager.registerEventListener(listener);
+    public void registerEventListener(Object listener) {
+        eventManager.registerEventListener(listener);
     }
 
-    public static void unregisterEventListener(Object listener) {
-        EventManager.unregisterEventListener(listener);
+    public void unregisterEventListener(Object listener) {
+        eventManager.unregisterEventListener(listener);
     }
 
-    public static void triggerEvent(Event event) {
-        EventManager.triggerEvent(event);
+    public void triggerEvent(Event event) {
+        eventManager.triggerEvent(event);
     }
 
 
     // Cannot think of a use case and will be in conflict with OnCommand()
     /*
      * public static void enableInput(boolean enable) { if(!enable)
-     * singleton.input.setText(""); singleton.input.setEnabled(enable); }
+     * input.setText(""); input.setEnabled(enable); }
      */
 
     private static final LoadingProcess loop = (i, loading) -> ++i == loading.length ? 3 : i;
@@ -637,13 +666,13 @@ public class ExternalConsole extends JFrame {
         return loadings;
     }
 
-    private static final AtomicBoolean isProgramRunning = new AtomicBoolean();
+    private final AtomicBoolean isProgramRunning = new AtomicBoolean();
 
-    private static ExternalConsoleCommand program = null;
+    private ExternalConsoleCommand program = null;
 
     @Handler
     public Thread onCommand(InputCommandExternalConsoleEvent event) {
-        if (isProgramRunning.get())
+        if (event.getOwner() != this || isProgramRunning.get())
             return null;
         println(argsToInput(event.getArgs()));
         inputStream.consumeAll();
@@ -678,7 +707,7 @@ public class ExternalConsole extends JFrame {
                     }
                     if (cmd.isProgram())
                         isProgramRunning.set(false);
-                    EventManager.triggerEvent(new AfterCommandExecutionExternalConsole(cmd, args, result));
+                    eventManager.triggerEvent(new AfterCommandExecutionExternalConsole(this, cmd, args, result));
                     program = null;
                 });
                 proc.start();
@@ -691,6 +720,8 @@ public class ExternalConsole extends JFrame {
                 }
                 int i = 3;
                 while (proc.isAlive() && !isProgramRunning.get()) {
+                    if(event.isDisableLoadingBar())
+                        continue;
                     input.setText(String.format("Processing %s", loading[i]));
                     proc.join((int) loading[1]);
                     i = ((LoadingProcess) loading[0]).nextLoading(i, loading);
@@ -708,30 +739,6 @@ public class ExternalConsole extends JFrame {
         return cmdThread;
     }
 
-    public ExternalConsoleOutputStream getOutputStream() {
-        return this.outputStream;
-    }
-
-    public ExternalConsoleErrorOutputStream getErrorOutputStream() {
-        return this.errorOutputStream;
-    }
-
-    public ExternalConsoleInputStream getInputStream() {
-        return this.inputStream;
-    }
-
-    public void setOutputStream(ExternalConsoleOutputStream outputStream) {
-        this.outputStream = outputStream;
-    }
-
-    public void setErrorOutputStream(ExternalConsoleErrorOutputStream errorOutputStream) {
-        this.errorOutputStream = errorOutputStream;
-    }
-
-    public void setInputStream(ExternalConsoleInputStream inputStream) {
-        this.inputStream = inputStream;
-    }
-
     public static void loadObjectAsCommand(Object object) {
         loadObjectAsCommand(object, false, false);
     }
@@ -742,7 +749,7 @@ public class ExternalConsole extends JFrame {
         Arrays.stream(clazz.getDeclaredMethods())
                 .filter(m -> includeOthers || (!m.getName().startsWith("$") && !m.getName().startsWith("lambda")))
                 .forEach(m ->
-                        ExternalConsole.addCommand(
+                        ExternalConsole.getSingleton().addCommand(
                                 new ExternalConsoleCommand() {
                                     @Override
                                     public String getCommand() {
@@ -780,7 +787,7 @@ public class ExternalConsole extends JFrame {
                                             m.trySetAccessible();
                                             var result = m.invoke(object, mArgs);
                                             if (!m.getReturnType().isInstance(void.class)) {
-                                                ExternalConsole.println(Utils.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(result));
+                                                ExternalConsole.getSingleton().println(Utils.MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(result));
                                             }
                                             return 0;
                                         } catch (Exception e) {
@@ -825,25 +832,27 @@ public class ExternalConsole extends JFrame {
             }
         };
 
-        private static final Logger logger = setUpLogger();
-
-        private static final EventManager singleton = new EventManager();
+        private final Logger logger;
 
         private final MBassador<Object> dispatcher;
 
-        private EventManager() {
+        private final ExternalConsole console;
+
+        private EventManager(ExternalConsole console) {
+            this.console = console;
             IBusConfiguration config = new BusConfiguration()
                     .addPublicationErrorHandler(error -> {
                     }).addFeature(Feature.SyncPubSub.Default())
                     .addFeature(Feature.AsynchronousHandlerInvocation.Default())
                     .addFeature(Feature.AsynchronousMessageDispatch.Default());
             this.dispatcher = new MBassador<>(config);
+            this.logger = setUpLogger();
         }
 
-        private static Logger setUpLogger() {
+        private Logger setUpLogger() {
             Logger logger = Logger.getLogger(EventManager.class.getName());
             logger.setUseParentHandlers(false);
-            StreamHandler handler = new StreamHandler(System.out, LOGGER_FORMATTER) {
+            StreamHandler handler = new StreamHandler(console.getOutputStream(), LOGGER_FORMATTER) {
                 @Override
                 public synchronized void publish(LogRecord record) {
                     super.publish(record);
@@ -855,7 +864,7 @@ public class ExternalConsole extends JFrame {
             return logger;
         }
 
-        public static void enableLogging(boolean val) {
+        public void enableLogging(boolean val) {
             if (val) {
                 logger.setLevel(Level.ALL);
             } else {
@@ -863,51 +872,57 @@ public class ExternalConsole extends JFrame {
             }
         }
 
-        public static boolean isEnableLogging() {
+        public boolean isEnableLogging() {
             return logger.getLevel().equals(Level.ALL);
         }
 
-        public static void registerEventListener(Object listener) {
-            singleton.dispatcher.subscribe(listener);
+        public void registerEventListener(Object listener) {
+            dispatcher.subscribe(listener);
         }
 
-        public static void unregisterEventListener(Object listener) {
-            singleton.dispatcher.unsubscribe(listener);
+        public void unregisterEventListener(Object listener) {
+            dispatcher.unsubscribe(listener);
         }
 
-        public static void triggerEvent(Event event) {
+        public void triggerEvent(Event event) {
             logger.info(String.format("Event %s triggered", event.getName()));
-            singleton.dispatcher.post(event).now();
+            dispatcher.post(event).now();
         }
     }
 
     public static void main(String[] args) throws Exception {
-        System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
-        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
-        logger.setLevel(Level.OFF);
         setSystemStreams();
         addCloseHandlingAsMain();
-        setViewable(true);
+        ExternalConsole.getSingleton().setViewable(true);
+        ExternalConsole.getSingleton().setClosable(true);
         parseArgsAsMain(args);
     }
 
     private static void parseArgsAsMain(String[] args) {
         if (args.length > 0) {
-            ExternalConsole.executeCommand(
-                    args[0],
-                    Arrays.copyOfRange(args, 1, args.length)
-            );
+            ExternalConsole.getSingleton()
+                    .executeCommand(
+                            args[0],
+                            Arrays.copyOfRange(args, 1, args.length)
+                    );
         }
     }
 
     private static void addCloseHandlingAsMain() {
-        registerEventListener(new Object() {
-            @Handler
-            public void onClose(ExternalConsoleClosingEvent event) {
-                singleton.dispose();
-                System.exit(0);
-            }
-        });
+        EventHandler.getInstance()
+                .registerListener(
+                        ExternalConsoleClosingEvent.class,
+                        ExternalConsole.getSingleton(),
+                        event -> {
+                            if (event.getOwner() != ExternalConsole.getSingleton() || !event.isClosable())
+                                return;
+                            ExternalConsole.getSingleton().dispose();
+                            ExternalConsole.getSingleton().getEventManager().unregisterEventListener(ExternalConsole.getSingleton());
+                            ExternalConsole.getSingleton().getEventManager().unregisterEventListener(EventHandler.getInstance());
+                            System.exit(0);
+                        },
+                        Integer.MIN_VALUE
+                );
     }
 
 }

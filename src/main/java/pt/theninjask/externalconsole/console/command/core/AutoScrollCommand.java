@@ -52,14 +52,14 @@ public class AutoScrollCommand implements ExternalConsoleCommand {
                 }
             });
             if (!succ) {
-                ExternalConsole.println(String.format("autoscroll is set as: %s", console._getAutoScroll()));
+                console.println(String.format("autoscroll is set as: %s", console._getAutoScroll()));
                 new HelpFormatter().printHelp(new PrintWriter(console.getOutputStream(), true), HelpFormatter.DEFAULT_WIDTH,
                         "autoscroll", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD,
                         null, true);
             }
 
         } catch (ParseException e) {
-            ExternalConsole.println(e.getMessage());
+            console.println(e.getMessage());
             return -1;
         }
         return 0;

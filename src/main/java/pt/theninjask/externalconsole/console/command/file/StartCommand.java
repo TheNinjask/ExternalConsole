@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.file;
 
+import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
@@ -7,8 +8,10 @@ import java.awt.*;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@RequiredArgsConstructor
 public class StartCommand implements ExternalConsoleCommand {
 
+    private static ExternalConsole console;
 
     @Override
     public String getCommand() {
@@ -33,7 +36,7 @@ public class StartCommand implements ExternalConsoleCommand {
                     break;
             }
         } catch (Exception e) {
-            ExternalConsole.println(e);
+            console.println(e);
             return -1;
         }
         return 0;

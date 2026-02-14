@@ -10,7 +10,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 
-import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
+import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressedNative;
 
 public class JythonProgram implements ExternalConsoleCommand {
 
@@ -39,13 +39,13 @@ public class JythonProgram implements ExternalConsoleCommand {
                 }
                 return 0;
             }
-            ExternalConsole.executeCommand("cls");
+            console.executeCommand("cls");
             BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
             try (InteractiveConsole jython = new InteractiveConsole()) {
                 this.jython = jython;
                 this.isRunning = true;
-                ExternalConsole.println("Jython 2.7.3 (CTRL+Z to exit)");
-                while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_Z))) {
+                console.println("Jython 2.7.3 (CTRL+Z to exit)");
+                while (!(isKeyPressedNative(KeyEvent.VK_CONTROL) && isKeyPressedNative(KeyEvent.VK_Z))) {
                     String str;
                     if ((str = read.readLine()) != null)
                         jython.push(str);
@@ -53,8 +53,8 @@ public class JythonProgram implements ExternalConsoleCommand {
                 this.isRunning = false;
                 this.jython = null;
             }
-            ExternalConsole.executeCommand("cls");
-            ExternalConsole.println("Leaving Jython Interpreter ...");
+            console.executeCommand("cls");
+            console.println("Leaving Jython Interpreter ...");
         } catch (Exception e) {
             e.printStackTrace();
             return -1;
@@ -81,7 +81,7 @@ public class JythonProgram implements ExternalConsoleCommand {
 
     @Override
     public String resultMessage(int result) {
-        return switch (result){
+        return switch (result) {
             case -1 -> "An exception has occurred!";
             default -> ExternalConsoleCommand.super.resultMessage(result);
         };

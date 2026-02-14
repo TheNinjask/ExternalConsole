@@ -62,6 +62,7 @@ public class OutputRedirectCommand implements ExternalConsoleCommand {
             });
             String[] eventArgs = Arrays.copyOfRange(args, 1, args.length);
             var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(
+                    console,
                     eventArgs
             ));
             try {
@@ -97,7 +98,7 @@ public class OutputRedirectCommand implements ExternalConsoleCommand {
             return null;
         }
         String cmdName = currArgs[1];
-        ExternalConsoleCommand cmd = ExternalConsole.getCommand(cmdName);
+        ExternalConsoleCommand cmd = console.getCommand(cmdName);
         if (cmd == null)
             return null;
         String[] cmdArgs = Arrays.copyOfRange(currArgs, 2, currArgs.length);

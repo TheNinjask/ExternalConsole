@@ -52,13 +52,13 @@ public class TopCommand implements ExternalConsoleCommand {
                 }
             });
             if (!succ) {
-                ExternalConsole.println(String.format("AlwaysOnTop is set as: %s", console.isAlwaysOnTop()));
+                console.println(String.format("AlwaysOnTop is set as: %s", console.isAlwaysOnTop()));
                 new HelpFormatter().printHelp(new PrintWriter(console.getOutputStream(), true), HelpFormatter.DEFAULT_WIDTH,
                         "top", null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, null,
                         true);
             }
         } catch (ParseException e) {
-            ExternalConsole.println(e.getMessage());
+            console.println(e.getMessage());
             return -1;
         }
         return 0;

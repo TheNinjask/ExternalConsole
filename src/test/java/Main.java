@@ -3,8 +3,8 @@ import pt.theninjask.externalconsole.console.ExternalConsole;
 public class Main {
 
     public static void main(String[] args) {
-        ExternalConsole.setViewable(true);
-        ExternalConsole.setSystemStreams();
+        //ExternalConsole.setViewable(true);
+        //ExternalConsole.setSystemStreams();
     }
 
     public static final void test(String[] args) {

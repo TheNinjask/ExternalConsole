@@ -38,14 +38,14 @@ public class ThemeCommand implements ExternalConsoleCommand {
             optionsMap = Map.ofEntries(Map.entry(set, () -> {
                 ColorTheme theme = themes.get(cmd.getOptionValue(set.getOpt()));
                 if (theme != null)
-                    ExternalConsole.setTheme(theme);
+                    console.setTheme(theme);
                 else
-                    ExternalConsole.println(String.format("Theme %s does not exist", set.getValue()));
+                    console.println(String.format("Theme %s does not exist", set.getValue()));
             }), Map.entry(add, () -> {
                 try {
                     String name = cmd.getOptionValues(add.getOpt())[0];
                     if (themes.containsKey(name)) {
-                        ExternalConsole.println(String.format("Theme with name %s already exists!", name));
+                        console.println(String.format("Theme with name %s already exists!", name));
                         return;
                     }
                     int rf = Integer.parseInt(cmd.getOptionValues(add.getOpt())[1]);
@@ -63,10 +63,10 @@ public class ThemeCommand implements ExternalConsoleCommand {
 
                     themes.put(name, new ColorTheme(name, new Color(rf, gf, bf), new Color(rb, gb, bb)));
 
-                    ExternalConsole.println(String.format("Theme %s added", name));
+                    console.println(String.format("Theme %s added", name));
                 } catch (Exception e) {
-                    ExternalConsole.println(e.getClass().getSimpleName());
-                    ExternalConsole.println(e.getMessage());
+                    console.println(e.getClass().getSimpleName());
+                    console.println(e.getMessage());
                 }
             }));
         }
@@ -97,15 +97,15 @@ public class ThemeCommand implements ExternalConsoleCommand {
                 option.get().getValue().run();
             else {
                 String current = "Unknown";
-                if (ExternalConsole.getTheme() != null)
-                    current = ExternalConsole.getTheme().name();
-                ExternalConsole.println(String.format("Theme is set as: %s", current));
+                if (console.getTheme() != null)
+                    current = console.getTheme().name();
+                console.println(String.format("Theme is set as: %s", current));
                 new HelpFormatter().printHelp(new PrintWriter(console.getOutputStream(), true), HelpFormatter.DEFAULT_WIDTH,
                         this.getCommand(), null, options, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD, null,
                         true);
             }
         } catch (ParseException e) {
-            ExternalConsole.println(e.getMessage());
+            console.println(e.getMessage());
             cmd = null;
             return -1;
         }

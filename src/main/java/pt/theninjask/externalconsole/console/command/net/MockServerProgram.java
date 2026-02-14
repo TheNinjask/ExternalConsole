@@ -5,12 +5,12 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import lombok.Builder;
 import lombok.Getter;
-import net.engio.mbassy.listener.Handler;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.python.google.common.net.MediaType;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
+import pt.theninjask.externalconsole.event.EventHandler;
 import pt.theninjask.externalconsole.event.ExternalConsoleClosingEvent;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
 
@@ -31,11 +31,9 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
-
 public class MockServerProgram implements ExternalConsoleCommand {
 
-    private static ExternalConsole console;
+    private final ExternalConsole console;
 
     private static HintType hintType = HintType.NONE;
 
@@ -91,17 +89,19 @@ public class MockServerProgram implements ExternalConsoleCommand {
             .desc("Override the cookie used for url when redirecting")
             .numberOfArgs(1)
             .build();
-    private static HttpServer server = null;
+    private HttpServer server = null;
 
+    public void onClose(ExternalConsoleClosingEvent event) {
+        if (event.getOwner() != console)
+            return;
+        Optional.ofNullable(server)
+                .ifPresent(svr -> svr.stop(0));
+    }
 
     public MockServerProgram(ExternalConsole console) {
-        ExternalConsole.registerEventListener(new Object() {
-            @Handler
-            public void onClose(ExternalConsoleClosingEvent event) {
-                Optional.ofNullable(server)
-                        .ifPresent(svr -> svr.stop(0));
-            }
-        });
+
+        this.console = console;
+
         contentTypes = Arrays.stream(MediaType.class.getDeclaredFields())
                 .filter(field -> {
                     if (!field.getDeclaringClass().isAssignableFrom(MediaType.class))
@@ -127,7 +127,6 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 })
                 .toArray(String[]::new);
 
-        MockServerProgram.console = console;
         this.optionsMap = Map
                 .ofEntries(
                         Map.entry(
@@ -185,6 +184,13 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
     @Override
     public int executeCommand(String... args) {
+        EventHandler.getInstance()
+                .registerListener(
+                        ExternalConsoleClosingEvent.class,
+                        this,
+                        this::onClose,
+                        0
+                );
         Options options = new Options();
         optionsMap.keySet().forEach(options::addOption);
         try {
@@ -203,30 +209,36 @@ public class MockServerProgram implements ExternalConsoleCommand {
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/", new MockHandler(mockHandlerArgs));
             server.setExecutor(null); // Default executor
-            ExternalConsole.setClosable(false);
-            ExternalConsole.println("Mock Server Activated (CTRL+C to stop)");
+            //console.setClosable(false);
+            console.println("Mock Server Activated (CTRL+C to stop)");
             server.start();
-            while ((!KeyPressedAdapter.isKeyPressed(
-                    KeyEvent.VK_CONTROL
-            ) || !KeyPressedAdapter.isKeyPressed(
-                    KeyEvent.VK_C
-            ) && server != null)) {
+            while (!KeyPressedAdapter.isCTRLAndCPressedNative() && server != null){
                 // Program Loop
             }
             if (server != null) {
                 server.stop(0);
                 server = null;
-                ExternalConsole.println("Mock Server Deactivated");
+                console.println("Mock Server Deactivated");
             }
-            ExternalConsole.setClosable(true);
+            EventHandler.getInstance()
+                    .unregisterListener(
+                            ExternalConsoleClosingEvent.class,
+                            this
+                    );
+            //console.setClosable(true);
             return 0;
         } catch (Exception e) {
             String msg = e.getMessage();
             if (e instanceof NoSuchElementException) {
                 msg = "--url is required (%s)".formatted(msg);
             }
-            ExternalConsole.println(msg);
-            ExternalConsole.setClosable(true);
+            console.println(msg);
+            //console.setClosable(true);
+            EventHandler.getInstance()
+                    .unregisterListener(
+                            ExternalConsoleClosingEvent.class,
+                            this
+                    );
             return -1;
         }
     }
@@ -257,6 +269,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 .map(cmd::getOptionValue)
                 .orElse(null);
         return MockHandlerArgs.builder()
+                .console(console)
                 .url(url)
                 .literal(literal)
                 .regex(regex)
@@ -322,6 +335,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
     @Getter
     @Builder
     static class MockHandlerArgs {
+        private ExternalConsole console;
         private String url;
         private String literal;
         private String regex;
@@ -333,6 +347,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
     // Custom handler that catches ALL requests to any path
     static class MockHandler implements HttpHandler {
 
+        private final ExternalConsole console;
         private final String url;
         private final String literal;
         private final Pattern regex;
@@ -344,11 +359,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
         private final String overrideCookie;
 
         private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
-                () -> !(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_C));
+                () -> !KeyPressedAdapter.isCTRLAndCPressedNative();
 
         public MockHandler(
                 MockHandlerArgs args
         ) {
+            this.console = args.getConsole();
             this.url = args.getUrl();
             this.literal = args.getLiteral();
             this.regex = args.getRegex() == null ? null : Pattern.compile(args.getRegex());
@@ -376,7 +392,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
 
             } catch (IOException | URISyntaxException | InterruptedException e) {
-                ExternalConsole.println(ExceptionUtils.getStackTrace(e));
+                console.println(ExceptionUtils.getStackTrace(e));
                 throw new IOException(e);
             }
         }
@@ -421,8 +437,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
         private void handleMock(HttpExchange exchange) throws IOException {
 
-            ExternalConsole.println("<=>");
-            ExternalConsole.println("Caught Request to mock: (%s) %s".formatted(
+            console.println("<=>");
+            console.println("Caught Request to mock: (%s) %s".formatted(
                     exchange.getRequestMethod(),
                     exchange.getRequestURI().getPath()));
 
@@ -431,19 +447,19 @@ public class MockServerProgram implements ExternalConsoleCommand {
             hintType = HintType.STATUS_CODE;
             console.getOutputStream().write("Status Code: ".getBytes());
             var statusCode = Integer.parseInt(getInput(read));
-            ExternalConsole.println(statusCode);
+            console.println(statusCode);
 
             hintType = HintType.CONTENT_TYPE;
             console.getOutputStream().write("Content-Type: ".getBytes());
             var contentType = getInput(read);
             var contentTypeParsed = console.inputToArgs(contentType);
             contentType = contentTypeParsed.length > 0 ? contentTypeParsed[0] : contentType;
-            ExternalConsole.println(contentType);
+            console.println(contentType);
 
             hintType = HintType.HAS_BODY;
             console.getOutputStream().write("Has Body: ".getBytes());
             var hasBody = Boolean.parseBoolean(getInput(read));
-            ExternalConsole.println(hasBody);
+            console.println(hasBody);
             byte[] body = null;
             if (hasBody) {
                 hintType = HintType.BODY;
@@ -451,7 +467,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 var bodyPath = getInput(read);
                 var bodyPathParsed = console.inputToArgs(bodyPath);
                 bodyPath = bodyPathParsed.length > 0 ? bodyPathParsed[0] : bodyPath;
-                ExternalConsole.println(bodyPath);
+                console.println(bodyPath);
                 body = Files.readAllBytes(
                         Paths.get(bodyPath)
                 );
@@ -470,8 +486,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
             }
             os.close();
             hintType = HintType.NONE;
-            ExternalConsole.println("<=>");
-            ExternalConsole.println();
+            console.println("<=>");
+            console.println();
         }
 
 
@@ -480,7 +496,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 String targetHost
         ) throws IOException, URISyntaxException, InterruptedException {
             String targetUrl = targetHost + exchange.getRequestURI();
-            ExternalConsole.println("Forwarding request to: " + targetUrl);
+            console.println("Forwarding request to: " + targetUrl);
 
             URL url = new URL(targetUrl);
             var hasBody = List.of(

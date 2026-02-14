@@ -1,19 +1,19 @@
 package pt.theninjask.externalconsole.console.command.core;
 
 import pt.theninjask.externalconsole.console.ExternalConsole;
+import pt.theninjask.externalconsole.console.ExternalConsoleAllCommandConsumerCommand;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.ExternalConsoleTrayCommand;
 import pt.theninjask.externalconsole.util.TrayManager;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
+import java.util.*;
 
-public class TrayManagerCommand implements ExternalConsoleCommand {
+public class TrayManagerCommand implements ExternalConsoleAllCommandConsumerCommand {
 
+    private Map<String, ExternalConsoleCommand> allCommands;
     private final ExternalConsole console;
 
     public TrayManagerCommand(ExternalConsole console) {
@@ -32,22 +32,22 @@ public class TrayManagerCommand implements ExternalConsoleCommand {
 
     @Override
     public int executeCommand(String... args) {
-        return ExternalConsole.isViewable() ? init() : stop();
+        return console.isViewable() ? init() : stop();
     }
 
     private int stop() {
         TrayManager.getInstance().clearMenuItems();
         TrayManager.getInstance().stop();
-        ExternalConsole.setViewable(true);
+        console.setViewable(true);
         ExternalConsole.setSystemStreams();
         return 0;
     }
 
     private int init() {
-        ExternalConsole.setViewable(false);
+        console.setViewable(false);
         ExternalConsole.revertSystemStreams();
         List<MenuItem> menuItems = convertCommandsToMenuItems(
-                console._getAllCommands().values()
+                getAllCommands().values()
         );
         menuItems.forEach(item -> TrayManager.getInstance().addMenuItem(item));
         TrayManager.getInstance()
@@ -57,7 +57,7 @@ public class TrayManagerCommand implements ExternalConsoleCommand {
 
     private List<MenuItem> convertCommandsToMenuItems(
             Collection<ExternalConsoleCommand> commandList
-    ){
+    ) {
         return commandList.stream()
                 .filter(ExternalConsoleCommand::canBeOnTray)
                 .map(cmd -> {
@@ -67,7 +67,7 @@ public class TrayManagerCommand implements ExternalConsoleCommand {
                         if (result != null && !result.isEmpty())
                             showMessageDialog(result, cmd.getCommand());
                     });
-                    if(cmd instanceof ExternalConsoleTrayCommand trayCmd){
+                    if (cmd instanceof ExternalConsoleTrayCommand trayCmd) {
                         trayCmd.consumeSelfMenuItem(item);
                     }
                     return item;
@@ -100,4 +100,13 @@ public class TrayManagerCommand implements ExternalConsoleCommand {
         return true;
     }
 
+    @Override
+    public void consumeCommandMapReference(Map<String, ExternalConsoleCommand> allCommands) {
+        this.allCommands = allCommands;
+    }
+
+    private Map<String, ExternalConsoleCommand> getAllCommands() {
+        return Optional.ofNullable(allCommands)
+                .orElseGet(Collections::emptyMap);
+    }
 }

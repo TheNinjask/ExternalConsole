@@ -4,6 +4,7 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import org.jnativehook.keyboard.NativeKeyEvent;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
@@ -13,7 +14,8 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
-import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressed;
+import static pt.theninjask.externalconsole.util.KeyPressedAdapter.isKeyPressedNative;
+
 
 public class SSHProgram implements ExternalConsoleCommand {
 
@@ -22,7 +24,7 @@ public class SSHProgram implements ExternalConsoleCommand {
     private final ExternalConsole console;
 
     private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
-            () -> !(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_D));
+            () -> !(isKeyPressedNative(NativeKeyEvent.VC_CONTROL) && isKeyPressedNative(NativeKeyEvent.VC_D));
 
     public SSHProgram(ExternalConsole console) {
         this.console = console;
@@ -38,26 +40,26 @@ public class SSHProgram implements ExternalConsoleCommand {
         Session session = null;
         ChannelShell channel = null;
         try {
-            ExternalConsole.executeCommand("cls");
+            console.executeCommand("cls");
             BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
-            ExternalConsole.println("EC's SSH 2.7.3 (CTRL+D to exit)");
+            console.println("EC's SSH 2.7.3 (CTRL+D to exit)");
             console.getOutputStream().write("Username: ".getBytes());
             hintType = 1;
             var username = getInput(read);
-            ExternalConsole.println(username);
+            console.println(username);
             console.getOutputStream().write("Password: ".getBytes());
             hintType = 2;
             var password = getInput(read);
-            ExternalConsole.println(password.replaceAll(".", "*"));
+            console.println(password.replaceAll(".", "*"));
             console.getOutputStream().write("Host: ".getBytes());
             hintType = 3;
             var host = getInput(read);
-            ExternalConsole.println(host);
+            console.println(host);
 
             console.getOutputStream().write("Port: ".getBytes());
             hintType = 4;
             var port = Integer.parseInt(getInput(read));
-            ExternalConsole.println(port);
+            console.println(port);
 
             hintType = 0;
 
@@ -92,8 +94,8 @@ public class SSHProgram implements ExternalConsoleCommand {
             }
             hintType = 0;
         }
-        ExternalConsole.executeCommand("cls");
-        ExternalConsole.println("Leaving EC's SSH ...");
+        console.executeCommand("cls");
+        console.println("Leaving EC's SSH ...");
         return 0;
     }
 

@@ -68,7 +68,7 @@ public class LoadScriptCommand implements ExternalConsoleCommand {
                             Stream.of(cmd),
                             Arrays.stream(args))
                     .toArray(String[]::new);
-            var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(eventArgs));
+            var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(console, eventArgs, true));
             if (cmdThread != null)
                 cmdThread.join();
         }

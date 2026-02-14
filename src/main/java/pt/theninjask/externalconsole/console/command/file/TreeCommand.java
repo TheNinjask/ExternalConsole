@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.file;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.cli.*;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
@@ -14,8 +15,10 @@ import java.util.Objects;
 
 import static pt.theninjask.externalconsole.console.command.file.ChangeDirectoryCommand.getCurrentDir;
 
+@RequiredArgsConstructor
 public class TreeCommand implements ExternalConsoleCommand {
 
+    private final ExternalConsole console;
     private static final int QUEUE_LIMIT = 10;
 
     private static final String ENTRY_NO_NEXT = "└───";
@@ -54,7 +57,7 @@ public class TreeCommand implements ExternalConsoleCommand {
      */
 
     private void printDirectoryTree(Path dir, boolean includeFiles, String... fileExtensions) {
-        ExternalConsole.println(dir.normalize().toAbsolutePath());
+        console.println(dir.normalize().toAbsolutePath());
 
         FileFilter filter = dir1 -> dir1.isDirectory() || (includeFiles
                 && (fileExtensions == null
@@ -64,7 +67,7 @@ public class TreeCommand implements ExternalConsoleCommand {
         File[] files = dir.toFile().listFiles(filter);
 
         if (files == null || files.length == 0)
-            ExternalConsole.println("No subfolders exist");
+            console.println("No subfolders exist");
 
         Object[] linkedList = new Object[4];
 
@@ -82,7 +85,7 @@ public class TreeCommand implements ExternalConsoleCommand {
                     hasNext ? ENTRY_NEXT : ENTRY_NO_NEXT, sub.getName()));
             currQueue++;
             if (currQueue > queuePatience) {
-                ExternalConsole.println(build.toString());
+                console.println(build.toString());
                 build = new StringBuilder();
                 queuePatience += 1 + currQueue / 2;
                 if (queuePatience > QUEUE_LIMIT)
@@ -115,7 +118,7 @@ public class TreeCommand implements ExternalConsoleCommand {
             }
         }
         if (currQueue > 0)
-            ExternalConsole.println(build.deleteCharAt(build.length() - 1).toString());
+            console.println(build.deleteCharAt(build.length() - 1).toString());
     }
 
     @Override
@@ -133,13 +136,13 @@ public class TreeCommand implements ExternalConsoleCommand {
                 default -> {
                     File path = getCurrentDir().resolve(Paths.get(cmd.getArgs()[0])).toFile();
                     if (!path.exists() || !path.isDirectory())
-                        ExternalConsole.println("Invalid path");
+                        console.println("Invalid path");
                     else
                         printDirectoryTree(path.toPath(), cmd.hasOption('f'), cmd.getOptionValues('f'));
                 }
             }
         } catch (Exception e) {
-            ExternalConsole.println(e.getMessage());
+            console.println(e.getMessage());
             return -1;
         }
         return 0;

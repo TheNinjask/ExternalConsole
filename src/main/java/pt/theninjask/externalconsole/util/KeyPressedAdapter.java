@@ -1,27 +1,64 @@
 package pt.theninjask.externalconsole.util;
 
-import java.awt.*;
-import java.awt.event.KeyEvent;
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeHookException;
+import org.jnativehook.keyboard.NativeKeyEvent;
+import org.jnativehook.keyboard.NativeKeyListener;
+
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class KeyPressedAdapter implements KeyEventDispatcher {
+public class KeyPressedAdapter {
 
-    private static final Set<Integer> pressedKeys = new CopyOnWriteArraySet<>();
+    private static KeyPressedAdapter instance = new KeyPressedAdapter();
 
-    public static boolean isKeyPressed(int keycode) {
-        return pressedKeys.contains(keycode);
+    public static KeyPressedAdapter getSingleton() {
+        return instance;
     }
 
-    @Override
-    public boolean dispatchKeyEvent(KeyEvent e) {
-        synchronized (this) {
-            switch (e.getID()) {
-                case KeyEvent.KEY_PRESSED -> pressedKeys.add(e.getKeyCode());
-                case KeyEvent.KEY_RELEASED -> pressedKeys.remove(e.getKeyCode());
-            }
-            return false;
+    private KeyPressedAdapter() {
+        System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
+        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+        logger.setLevel(Level.OFF);
+        try {
+            GlobalScreen.registerNativeHook();
+            GlobalScreen.addNativeKeyListener(new NativeKeyListener() {
+
+                @Override
+                public void nativeKeyTyped(NativeKeyEvent e) {
+                    // DO NOTHING
+                }
+
+                @Override
+                public void nativeKeyReleased(NativeKeyEvent e) {
+                    // DO NOTHING
+                    pressedNativeKeys.remove(e.getKeyCode());
+                }
+
+                @Override
+                public void nativeKeyPressed(NativeKeyEvent e) {
+                    pressedNativeKeys.add(e.getKeyCode());
+                }
+            });
+        } catch (NativeHookException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    private static final Set<Integer> pressedNativeKeys = new CopyOnWriteArraySet<>();
+
+    public static boolean isKeyPressedNative(int keycode) {
+        return pressedNativeKeys.contains(keycode);
+    }
+
+    public static boolean isCTRLAndCPressedNative() {
+        return KeyPressedAdapter.isKeyPressedNative(
+                NativeKeyEvent.VC_CONTROL
+        ) && KeyPressedAdapter.isKeyPressedNative(
+                NativeKeyEvent.VC_C
+        );
     }
 
 }
