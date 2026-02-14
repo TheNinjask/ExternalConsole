@@ -88,4 +88,9 @@ public class LoadScriptCommand implements ExternalConsoleCommand {
             default -> ExternalConsoleCommand.super.resultMessage(result);
         };
     }
+
+    @Override
+    public boolean accessibleInCode() {
+        return true;
+    }
 }
