@@ -7,7 +7,6 @@ import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.listener.Handler;
 import org.jnativehook.GlobalScreen;
-import org.jnativehook.NativeHookException;
 import org.reflections.Reflections;
 import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.TimerCommand;
@@ -24,7 +23,6 @@ import pt.theninjask.externalconsole.stream.RedirectorInputStream;
 import pt.theninjask.externalconsole.stream.RedirectorOutputStream;
 import pt.theninjask.externalconsole.util.ColorTheme;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
-import pt.theninjask.externalconsole.util.TrayManager;
 import pt.theninjask.externalconsole.util.Utils;
 
 import javax.swing.*;
@@ -39,7 +37,6 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.PrintStream;
 import java.io.Serial;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -889,6 +886,21 @@ public class ExternalConsole extends JFrame {
         logger.setLevel(Level.OFF);
         System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
         setSystemStreams();
+        addCloseHandlingAsMain();
+        setViewable(true);
+        parseArgsAsMain(args);
+    }
+
+    private static void parseArgsAsMain(String[] args) {
+        if (args.length > 0) {
+            ExternalConsole.executeCommand(
+                    args[0],
+                    Arrays.copyOfRange(args, 1, args.length)
+            );
+        }
+    }
+
+    private static void addCloseHandlingAsMain() {
         registerEventListener(new Object() {
             @Handler
             public void onClose(ExternalConsoleClosingEvent event) {
@@ -896,7 +908,6 @@ public class ExternalConsole extends JFrame {
                 System.exit(0);
             }
         });
-        setViewable(true);
     }
 
 }
