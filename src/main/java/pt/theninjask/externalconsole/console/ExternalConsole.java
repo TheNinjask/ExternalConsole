@@ -897,7 +897,6 @@ public class ExternalConsole extends JFrame {
             }
         });
         setViewable(true);
-        ExternalConsole.executeCommand("tray");
     }
 
 }
