@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.net;
 
+import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.event.BasicEvent;
 
 public class CurlyResponseEvent extends BasicEvent {
@@ -10,8 +11,8 @@ public class CurlyResponseEvent extends BasicEvent {
     private final int statusCode;
     private final String body;
 
-    public CurlyResponseEvent(String id, String url, String httpMethod, int statusCode, String body) {
-        super(CurlyResponseEvent.class.getSimpleName(), false);
+    public CurlyResponseEvent(ExternalConsole console, String id, String url, String httpMethod, int statusCode, String body) {
+        super(console, CurlyResponseEvent.class.getSimpleName(), false);
         this.id = id;
         this.url = url;
         this.httpMethod = httpMethod;

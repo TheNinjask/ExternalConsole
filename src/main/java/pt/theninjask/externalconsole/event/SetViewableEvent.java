@@ -1,11 +1,13 @@
 package pt.theninjask.externalconsole.event;
 
+import pt.theninjask.externalconsole.console.ExternalConsole;
+
 public class SetViewableEvent extends BasicEvent {
 
     private final boolean value;
 
-    public SetViewableEvent(boolean toViewable) {
-        super(SetViewableEvent.class.getSimpleName(), true);
+    public SetViewableEvent(ExternalConsole console, boolean toViewable) {
+        super(console, SetViewableEvent.class.getSimpleName(), true);
         this.value = toViewable;
     }
 

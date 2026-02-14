@@ -226,6 +226,7 @@ public class CurlyCommand implements ExternalConsoleCommand {
             }
             console.triggerEvent(
                     new CurlyResponseEvent(
+                            console,
                             cmd.getOptionValue(idOpt.getOpt()),
                             cmd.getOptionValue(urlOpt.getOpt()),
                             cmd.getOptionValue(methodOpt.getOpt()),

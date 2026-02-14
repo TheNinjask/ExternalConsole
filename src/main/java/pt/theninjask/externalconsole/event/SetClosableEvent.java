@@ -1,11 +1,13 @@
 package pt.theninjask.externalconsole.event;
 
+import pt.theninjask.externalconsole.console.ExternalConsole;
+
 public class SetClosableEvent extends BasicEvent {
 
     private final boolean value;
 
-    public SetClosableEvent(boolean toClosable) {
-        super(SetClosableEvent.class.getSimpleName(), true);
+    public SetClosableEvent(ExternalConsole console, boolean toClosable) {
+        super(console, SetClosableEvent.class.getSimpleName(), true);
         this.value = toClosable;
     }
 

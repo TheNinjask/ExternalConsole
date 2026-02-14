@@ -148,18 +148,22 @@ public class ExternalConsole extends JFrame {
         this.input.setCaretColor(currentTheme.font());
         this.input.setBackground(currentTheme.background());
 
+        eventManager = new EventManager(this);
+        eventManager.registerEventListener(this);
+        eventManager.registerEventListener(EventHandler.getInstance());
+
+        ExternalConsole console = this;
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent windowEvent) {
-                eventManager.triggerEvent(new ExternalConsoleClosingEvent(isClosable()));
+                eventManager.triggerEvent(new ExternalConsoleClosingEvent(console, isClosable()));
+                if (!isMain)
+                    dispose();
             }
         });
 
         Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
         this.setLocation(dim.width / 2 - this.getSize().width / 2, dim.height / 2 - this.getSize().height / 2);
-
-        eventManager = new EventManager(this);
-        eventManager.registerEventListener(this);
 
         initialCommandsLoad();
     }
@@ -217,7 +221,7 @@ public class ExternalConsole extends JFrame {
     }
 
     public void setViewable(boolean b) {
-        SetViewableEvent event = new SetViewableEvent(b);
+        SetViewableEvent event = new SetViewableEvent(this, b);
         eventManager.triggerEvent(event);
         if (event.isCancelled())
             return;
@@ -229,7 +233,7 @@ public class ExternalConsole extends JFrame {
     }
 
     public void setClosable(boolean b) {
-        SetClosableEvent event = new SetClosableEvent(b);
+        SetClosableEvent event = new SetClosableEvent(this, b);
         eventManager.triggerEvent(event);
         if (event.isCancelled())
             return;
@@ -269,7 +273,7 @@ public class ExternalConsole extends JFrame {
             return false;
         args = parseArgsVars(args);
         int result = ecmd.executeCommand(args);
-        eventManager.triggerEvent(new AfterCommandExecutionExternalConsole(ecmd, args, result));
+        eventManager.triggerEvent(new AfterCommandExecutionExternalConsole(this, ecmd, args, result));
         return true;
     }
 
@@ -285,6 +289,7 @@ public class ExternalConsole extends JFrame {
         input.setBorder(null);
 
         input.setFocusTraversalKeysEnabled(false);
+        ExternalConsole console = this;
         input.addKeyListener(new KeyListener() {
 
             private int tabPos = -1;
@@ -360,6 +365,7 @@ public class ExternalConsole extends JFrame {
                     }
                     case KeyEvent.VK_ENTER -> {
                         InputCommandExternalConsoleEvent event = new InputCommandExternalConsoleEvent(
+                                console,
                                 inputToArgs(input.getText()));
                         while (last.getNext() != UsedCommand.NULL_UC)
                             last = last.getNext();
@@ -690,7 +696,7 @@ public class ExternalConsole extends JFrame {
                     }
                     if (cmd.isProgram())
                         isProgramRunning.set(false);
-                    eventManager.triggerEvent(new AfterCommandExecutionExternalConsole(cmd, args, result));
+                    eventManager.triggerEvent(new AfterCommandExecutionExternalConsole(this, cmd, args, result));
                     program = null;
                 });
                 proc.start();
@@ -892,14 +898,17 @@ public class ExternalConsole extends JFrame {
     }
 
     private static void addCloseHandlingAsMain() {
-        ExternalConsole.getSingleton()
-                .registerEventListener(new Object() {
-                    @Handler
-                    public void onClose(ExternalConsoleClosingEvent event) {
-                        ExternalConsole.getSingleton().dispose();
-                        System.exit(0);
-                    }
-                });
+        EventHandler.getInstance()
+                .registerListener(
+                        ExternalConsoleClosingEvent.class,
+                        ExternalConsole.getSingleton(),
+                        event -> {
+                            if (event.getOwner() != ExternalConsole.getSingleton())
+                                return;
+                            ExternalConsole.getSingleton().dispose();
+                            System.exit(0);
+                        }
+                );
     }
 
 }

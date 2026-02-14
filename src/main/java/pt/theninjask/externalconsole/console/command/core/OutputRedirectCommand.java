@@ -62,6 +62,7 @@ public class OutputRedirectCommand implements ExternalConsoleCommand {
             });
             String[] eventArgs = Arrays.copyOfRange(args, 1, args.length);
             var cmdThread = console.onCommand(new InputCommandExternalConsoleEvent(
+                    console,
                     eventArgs
             ));
             try {

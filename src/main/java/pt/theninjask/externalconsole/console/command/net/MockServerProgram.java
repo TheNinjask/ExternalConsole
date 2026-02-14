@@ -5,12 +5,12 @@ import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import lombok.Builder;
 import lombok.Getter;
-import net.engio.mbassy.listener.Handler;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.python.google.common.net.MediaType;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
+import pt.theninjask.externalconsole.event.EventHandler;
 import pt.theninjask.externalconsole.event.ExternalConsoleClosingEvent;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
 
@@ -91,19 +91,26 @@ public class MockServerProgram implements ExternalConsoleCommand {
             .desc("Override the cookie used for url when redirecting")
             .numberOfArgs(1)
             .build();
-    private static HttpServer server = null;
+    private HttpServer server = null;
 
+    public void onClose(ExternalConsoleClosingEvent event) {
+        if (event.getOwner() != console)
+            return;
+        Optional.ofNullable(server)
+                .ifPresent(svr -> svr.stop(0));
+        EventHandler.getInstance()
+                .unregisterListener(
+                        ExternalConsoleClosingEvent.class,
+                        this
+                );
+    }
 
     public MockServerProgram(ExternalConsole console) {
 
         this.console = console;
-        console.registerEventListener(new Object() {
-            @Handler
-            public void onClose(ExternalConsoleClosingEvent event) {
-                Optional.ofNullable(server)
-                        .ifPresent(svr -> svr.stop(0));
-            }
-        });
+
+        console.registerEventListener(this);
+
         contentTypes = Arrays.stream(MediaType.class.getDeclaredFields())
                 .filter(field -> {
                     if (!field.getDeclaringClass().isAssignableFrom(MediaType.class))
@@ -186,6 +193,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
     @Override
     public int executeCommand(String... args) {
+        EventHandler.getInstance()
+                .registerListener(
+                        ExternalConsoleClosingEvent.class,
+                        this,
+                        this::onClose
+                );
         Options options = new Options();
         optionsMap.keySet().forEach(options::addOption);
         try {

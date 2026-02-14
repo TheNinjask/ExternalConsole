@@ -1,23 +1,22 @@
 package pt.theninjask.externalconsole.console.command.util;
 
+import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleAllCommandConsumerCommand;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.core.AndCommand;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class MultipleExternalConsoleManagerProgram implements ExternalConsoleAllCommandConsumerCommand {
+@RequiredArgsConstructor
+public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAllCommandConsumerCommand {
 
     private Map<String, ExternalConsoleCommand> allCommands;
 
-    private final ExternalConsole mainConsole;
-
-    public MultipleExternalConsoleManagerProgram() {
-        mainConsole = ExternalConsole.getSingleton();
-    }
+    private final ExternalConsole console;
 
     @Override
     public String getCommand() {
@@ -31,6 +30,14 @@ public class MultipleExternalConsoleManagerProgram implements ExternalConsoleAll
 
     @Override
     public int executeCommand(String... args) {
+        List<ExternalConsole> otherConsoles = List.of(
+                console.generateAnotherConsole(),
+                console.generateAnotherConsole()
+        );
+        otherConsoles.stream().forEach(c -> c.setViewable(true));
+        while (otherConsoles.stream().anyMatch(ExternalConsole::isDisplayable)) {
+            // loop until all consoles are closed
+        }
         return 0;
     }
 
@@ -46,11 +53,6 @@ public class MultipleExternalConsoleManagerProgram implements ExternalConsoleAll
 
     @Override
     public boolean accessibleInCode() {
-        return true;
-    }
-
-    @Override
-    public boolean isProgram() {
         return true;
     }
 
