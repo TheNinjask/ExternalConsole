@@ -256,7 +256,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 .map(Option::getOpt)
                 .map(cmd::getOptionValue)
                 .orElse(null);
-        MockHandlerArgs mockHandlerArgs = MockHandlerArgs.builder()
+        return MockHandlerArgs.builder()
                 .url(url)
                 .literal(literal)
                 .regex(regex)
@@ -264,7 +264,6 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 .overrideToken(overrideToken)
                 .overrideCookie(overrideCookie)
                 .build();
-        return mockHandlerArgs;
     }
 
     @Override
@@ -497,27 +496,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                                     : HttpRequest.BodyPublishers.noBody()
                     );
 
-            exchange.getRequestHeaders()
-                    .forEach((key, values) -> {
-                        if (List.of("connection", "host", "content-length")
-                                .contains(key.toLowerCase()))
-                            return;
-                        if (Objects.equals(
-                                "authorization",
-                                key.toLowerCase()) && overrideToken != null
-                        ) {
-                            requestBuilder.headers(
-                                    Stream.of(key, overrideToken)
-                                            .toArray(String[]::new)
-                            );
-                        }
-                        requestBuilder.headers(
-                                Stream.concat(
-                                                Stream.of(key),
-                                                values.stream())
-                                        .toArray(String[]::new)
-                        );
-                    });
+            handleRedirectHeaders(exchange, requestBuilder);
 
             HttpResponse<byte[]> response = HttpClient.newHttpClient()
                     .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());
@@ -554,6 +533,44 @@ public class MockServerProgram implements ExternalConsoleCommand {
             if (responseBody.length > 0)
                 os.write(responseBody);
             os.close();
+        }
+
+        private void handleRedirectHeaders(
+                HttpExchange exchange,
+                HttpRequest.Builder requestBuilder
+        ) {
+            exchange.getRequestHeaders()
+                    .forEach((key, values) -> {
+                        if (List.of("connection", "host", "content-length")
+                                .contains(key.toLowerCase()))
+                            return;
+                        if (Objects.equals(
+                                "authorization",
+                                key.toLowerCase()) && overrideToken != null
+                        ) {
+                            requestBuilder.headers(
+                                    Stream.of(key, overrideToken)
+                                            .toArray(String[]::new)
+                            );
+                            return;
+                        }
+                        if (Objects.equals(
+                                "cookie",
+                                key.toLowerCase()) && overrideCookie != null
+                        ) {
+                            requestBuilder.headers(
+                                    Stream.of(key, overrideCookie)
+                                            .toArray(String[]::new)
+                            );
+                            return;
+                        }
+                        requestBuilder.headers(
+                                Stream.concat(
+                                                Stream.of(key),
+                                                values.stream())
+                                        .toArray(String[]::new)
+                        );
+                    });
         }
 
         private String getInput(BufferedReader read) throws IOException {
