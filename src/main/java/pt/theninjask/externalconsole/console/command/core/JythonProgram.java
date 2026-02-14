@@ -39,12 +39,12 @@ public class JythonProgram implements ExternalConsoleCommand {
                 }
                 return 0;
             }
-            ExternalConsole.executeCommand("cls");
+            console._executeCommand("cls");
             BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
             try (InteractiveConsole jython = new InteractiveConsole()) {
                 this.jython = jython;
                 this.isRunning = true;
-                ExternalConsole.println("Jython 2.7.3 (CTRL+Z to exit)");
+                console._println("Jython 2.7.3 (CTRL+Z to exit)");
                 while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_Z))) {
                     String str;
                     if ((str = read.readLine()) != null)
@@ -53,8 +53,8 @@ public class JythonProgram implements ExternalConsoleCommand {
                 this.isRunning = false;
                 this.jython = null;
             }
-            ExternalConsole.executeCommand("cls");
-            ExternalConsole.println("Leaving Jython Interpreter ...");
+            console._executeCommand("cls");
+            console._println("Leaving Jython Interpreter ...");
         } catch (Exception e) {
             e.printStackTrace();
             return -1;
@@ -81,7 +81,7 @@ public class JythonProgram implements ExternalConsoleCommand {
 
     @Override
     public String resultMessage(int result) {
-        return switch (result){
+        return switch (result) {
             case -1 -> "An exception has occurred!";
             default -> ExternalConsoleCommand.super.resultMessage(result);
         };

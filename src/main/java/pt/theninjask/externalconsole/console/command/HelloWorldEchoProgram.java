@@ -51,8 +51,8 @@ public class HelloWorldEchoProgram implements ExternalConsoleCommand {
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
         if (number == 0)
-            return new String[]{"demo_0", "demo_1"};
-        return new String[]{"demo_2", "demo_3"};
+            return new String[]{"hw","demo_0", "demo_1"};
+        return new String[]{"hw","demo_2", "demo_3"};
     }
 
 }

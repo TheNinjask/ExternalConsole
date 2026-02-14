@@ -56,6 +56,10 @@ public class AndCommand implements ExternalConsoleCommand {
 
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
+        return AndCommand.getParamOptions(console, number, currArgs);
+    }
+
+    public static String[] getParamOptions(ExternalConsole console, int number, String[] currArgs) {
         int nextType = CMD;
         var it = Arrays.stream(currArgs).iterator();
         String lastCmd = null;
