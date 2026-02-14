@@ -2,6 +2,7 @@ package pt.theninjask.externalconsole.console.command.util;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jnativehook.keyboard.NativeKeyEvent;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleAllCommandConsumerCommand;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
@@ -73,17 +74,33 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
                         },
                         0
                 );
-        console.executeCommand("top", "--true");
+        boolean finalFunMode = funMode;
+        boolean finalCircleMode = circleMode;
         otherConsoles.stream().forEach(p -> {
             var c = p.getKey();
             var cmd = p.getValue();
             Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-            if (funMode && !circleMode) {
+            if (finalFunMode && finalCircleMode) {
+                c.executeCommand("top", "--true");
+                int radius = Math.min(dim.width, dim.height) / 4;
+                double time = System.currentTimeMillis() / 1000.0; // Time in seconds
+
+                // Get the center of the main console
+                Point mainConsoleLocation = console.getLocation();
+                int mainConsoleCenterX = mainConsoleLocation.x + console.getWidth() / 2;
+                int mainConsoleCenterY = mainConsoleLocation.y + console.getHeight() / 2;
+                double angle = 2 * Math.PI * otherConsoles.indexOf(p) / otherConsoles.size() + time; // Dynamic angle
+                c.setLocation(
+                        mainConsoleCenterX + (int) (radius * Math.cos(angle)) - c.getWidth() / 2,
+                        mainConsoleCenterY + (int) (radius * Math.sin(angle)) - c.getHeight() / 2
+                );
+
+            } else if (finalFunMode) {
                 c.setLocationRelativeToCenter(
                         ThreadLocalRandom.current().nextInt(-dim.width / 2, dim.width / 2),
                         ThreadLocalRandom.current().nextInt(-dim.height / 2, dim.height / 2)
                 );
-            } else if (circleMode) {
+            } else if (finalCircleMode) {
                 int radius = Math.min(dim.width, dim.height) / 4;
                 double angle = 2 * Math.PI * otherConsoles.indexOf(p) / otherConsoles.size();
                 c.setLocationRelativeToCenter(
@@ -96,6 +113,7 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
             c.setViewable(true);
             c.onCommand(cmd);
         });
+        console.executeCommand("top", "--true");
         while (true) {
             if (KeyPressedAdapter.isCTRLAndCPressedNative())
                 break;
@@ -103,19 +121,34 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
                 break;
             // loop until all consoles are closed
 
+            if (KeyPressedAdapter.isKeyPressedNative(NativeKeyEvent.VC_ESCAPE)) {
+                funMode = !funMode;
+                circleMode = !circleMode;
+                try {
+                    Thread.sleep(1000); // debounce
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
 
             if (circleMode && funMode) {
                 Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
                 int radius = Math.min(dim.width, dim.height) / 4;
                 double time = System.currentTimeMillis() / 1000.0; // Time in seconds
 
+                // Get the center of the main console
+                Point mainConsoleLocation = console.getLocation();
+                int mainConsoleCenterX = mainConsoleLocation.x + console.getWidth() / 2;
+                int mainConsoleCenterY = mainConsoleLocation.y + console.getHeight() / 2;
+
                 for (int i = 0; i < otherConsoles.size(); i++) {
                     Pair<ExternalConsole, InputCommandExternalConsoleEvent> p = otherConsoles.get(i);
                     ExternalConsole c = p.getKey();
                     double angle = 2 * Math.PI * i / otherConsoles.size() + time; // Dynamic angle
-                    c.setLocationRelativeToCenter(
-                            (int) (radius * Math.cos(angle)),
-                            (int) (radius * Math.sin(angle))
+                    c.setLocation(
+                            mainConsoleCenterX + (int) (radius * Math.cos(angle)) - c.getWidth() / 2,
+                            mainConsoleCenterY + (int) (radius * Math.sin(angle)) - c.getHeight() / 2
                     );
                 }
             }
