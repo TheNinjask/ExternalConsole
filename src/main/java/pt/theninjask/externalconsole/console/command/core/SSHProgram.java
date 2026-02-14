@@ -38,26 +38,26 @@ public class SSHProgram implements ExternalConsoleCommand {
         Session session = null;
         ChannelShell channel = null;
         try {
-            ExternalConsole.executeCommand("cls");
+            console.executeCommand("cls");
             BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
-            ExternalConsole.println("EC's SSH 2.7.3 (CTRL+D to exit)");
+            console.println("EC's SSH 2.7.3 (CTRL+D to exit)");
             console.getOutputStream().write("Username: ".getBytes());
             hintType = 1;
             var username = getInput(read);
-            ExternalConsole.println(username);
+            console.println(username);
             console.getOutputStream().write("Password: ".getBytes());
             hintType = 2;
             var password = getInput(read);
-            ExternalConsole.println(password.replaceAll(".", "*"));
+            console.println(password.replaceAll(".", "*"));
             console.getOutputStream().write("Host: ".getBytes());
             hintType = 3;
             var host = getInput(read);
-            ExternalConsole.println(host);
+            console.println(host);
 
             console.getOutputStream().write("Port: ".getBytes());
             hintType = 4;
             var port = Integer.parseInt(getInput(read));
-            ExternalConsole.println(port);
+            console.println(port);
 
             hintType = 0;
 
@@ -92,8 +92,8 @@ public class SSHProgram implements ExternalConsoleCommand {
             }
             hintType = 0;
         }
-        ExternalConsole.executeCommand("cls");
-        ExternalConsole.println("Leaving EC's SSH ...");
+        console.executeCommand("cls");
+        console.println("Leaving EC's SSH ...");
         return 0;
     }
 

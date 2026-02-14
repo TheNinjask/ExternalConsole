@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.file;
 
+import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
@@ -7,8 +8,10 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@RequiredArgsConstructor
 public class ChangeDirectoryCommand implements ExternalConsoleCommand {
 
+    private final ExternalConsole console;
     private static Path currentDir = Paths.get(".");
 
     public static Path getCurrentDir() {
@@ -33,18 +36,17 @@ public class ChangeDirectoryCommand implements ExternalConsoleCommand {
                     Path newCurrentDir = currentDir.resolve(Paths.get(args[0]));
                     File test = newCurrentDir.toFile();
                     if (!test.isDirectory()) {
-                        ExternalConsole.println(
+                        console.println(
                                 String.format("The path %s is not valid.", newCurrentDir.normalize().toAbsolutePath()));
                         break;
                     }
                     currentDir = newCurrentDir.toRealPath();
                 case 0:
-                    ExternalConsole
-                            .println(String.format("Current Directory:\n\t%s", currentDir.normalize().toAbsolutePath()));
+                    console.println(String.format("Current Directory:\n\t%s", currentDir.normalize().toAbsolutePath()));
                     break;
             }
         } catch (Exception e) {
-            ExternalConsole.println(e);
+            console.println(e);
             return -1;
         }
         return 0;

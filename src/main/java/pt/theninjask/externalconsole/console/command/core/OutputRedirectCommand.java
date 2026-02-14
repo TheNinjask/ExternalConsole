@@ -97,7 +97,7 @@ public class OutputRedirectCommand implements ExternalConsoleCommand {
             return null;
         }
         String cmdName = currArgs[1];
-        ExternalConsoleCommand cmd = ExternalConsole.getCommand(cmdName);
+        ExternalConsoleCommand cmd = console.getCommand(cmdName);
         if (cmd == null)
             return null;
         String[] cmdArgs = Arrays.copyOfRange(currArgs, 2, currArgs.length);

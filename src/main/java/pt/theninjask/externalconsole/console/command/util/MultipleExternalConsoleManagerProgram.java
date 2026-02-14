@@ -1,15 +1,22 @@
 package pt.theninjask.externalconsole.console.command.util;
 
 import pt.theninjask.externalconsole.console.ExternalConsole;
+import pt.theninjask.externalconsole.console.ExternalConsoleAllCommandConsumerCommand;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.core.AndCommand;
 
-public class MultipleExternalConsoleManagerProgram implements ExternalConsoleCommand {
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+
+public class MultipleExternalConsoleManagerProgram implements ExternalConsoleAllCommandConsumerCommand {
+
+    private Map<String, ExternalConsoleCommand> allCommands;
 
     private final ExternalConsole mainConsole;
 
-    public MultipleExternalConsoleManagerProgram(ExternalConsole console) {
-        mainConsole = console;
+    public MultipleExternalConsoleManagerProgram() {
+        mainConsole = ExternalConsole.getSingleton();
     }
 
     @Override
@@ -29,12 +36,12 @@ public class MultipleExternalConsoleManagerProgram implements ExternalConsoleCom
 
     @Override
     public String resultMessage(int result) {
-        return ExternalConsoleCommand.super.resultMessage(result);
+        return ExternalConsoleAllCommandConsumerCommand.super.resultMessage(result);
     }
 
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
-        return AndCommand.getParamOptions(mainConsole, number, currArgs);
+        return AndCommand.getParamOptions(getAllCommands(), number, currArgs);
     }
 
     @Override
@@ -50,5 +57,15 @@ public class MultipleExternalConsoleManagerProgram implements ExternalConsoleCom
     @Override
     public boolean isDemo() {
         return true;
+    }
+
+    @Override
+    public void consumeCommandMapReference(Map<String, ExternalConsoleCommand> allCommands) {
+        this.allCommands = allCommands;
+    }
+
+    private Map<String, ExternalConsoleCommand> getAllCommands() {
+        return Optional.ofNullable(allCommands)
+                .orElseGet(Collections::emptyMap);
     }
 }

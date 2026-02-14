@@ -7,6 +7,12 @@ import java.util.Arrays;
 
 public class TimerCommand implements ExternalConsoleCommand {
 
+    private final ExternalConsole console;
+
+    public TimerCommand(ExternalConsole console) {
+        this.console = console;
+    }
+
     @Override
     public String getCommand() {
         return "timer";
@@ -25,19 +31,19 @@ public class TimerCommand implements ExternalConsoleCommand {
         String cmdName = args[0];
         String[] cmdArgs = Arrays.copyOfRange(args, 1, args.length);
         long start = System.nanoTime();
-        boolean exeRes = ExternalConsole.executeCommand(cmdName, cmdArgs);
+        boolean exeRes = console.executeCommand(cmdName, cmdArgs);
         if (!exeRes) {
             return -2;
         }
         long stop = System.nanoTime();
         long time = stop - start;
-        ExternalConsole.println(String.format("Time taken: %s nanoseconds", time));
+        console.println(String.format("Time taken: %s nanoseconds", time));
         time = time / 1000000000;
         if (time > 0)
-            ExternalConsole.println(String.format("Time taken: %s seconds", time));
+            console.println(String.format("Time taken: %s seconds", time));
         time = time / 60;
         if (time > 0)
-            ExternalConsole.println(String.format("Time taken: %s minutes", time));
+            console.println(String.format("Time taken: %s minutes", time));
         return Long.valueOf(stop - start).intValue();
     }
 
@@ -51,7 +57,7 @@ public class TimerCommand implements ExternalConsoleCommand {
         if (number < 1)
             return null;
         String cmdName = currArgs[0];
-        ExternalConsoleCommand cmd = ExternalConsole.getCommand(cmdName);
+        ExternalConsoleCommand cmd = console.getCommand(cmdName);
         if (cmd == null)
             return null;
         String[] cmdArgs = Arrays.copyOfRange(currArgs, 1, currArgs.length);

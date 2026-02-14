@@ -215,16 +215,16 @@ public class CurlyCommand implements ExternalConsoleCommand {
             var response = HttpClient.newHttpClient()
                     .send(request, HttpResponse.BodyHandlers.ofString());
             if (cmd.hasOption(statusOpt.getOpt())) {
-                ExternalConsole.println("Status code: %1$s".formatted(response.statusCode()));
+                console.println("Status code: %1$s".formatted(response.statusCode()));
             }
             if (cmd.hasOption(dumpOpt.getOpt())) {
                 var fileToDump = ChangeDirectoryCommand.getCurrentDir().resolve(cmd.getOptionValue(dumpOpt.getOpt()));
                 Files.writeString(fileToDump, response.body());
             }
             if (cmd.hasOption(printOpt.getOpt())) {
-                ExternalConsole.println(response.body());
+                console.println(response.body());
             }
-            ExternalConsole.triggerEvent(
+            console.triggerEvent(
                     new CurlyResponseEvent(
                             cmd.getOptionValue(idOpt.getOpt()),
                             cmd.getOptionValue(urlOpt.getOpt()),
@@ -234,11 +234,11 @@ public class CurlyCommand implements ExternalConsoleCommand {
                     )
             );
         } catch (ParseException e) {
-            ExternalConsole.println(e.getMessage());
+            console.println(e.getMessage());
             printHelp();
             return -2;
         } catch (Exception e) {
-            ExternalConsole.println(e.getMessage());
+            console.println(e.getMessage());
             return -1;
         }
         return 0;

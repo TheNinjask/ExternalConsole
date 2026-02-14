@@ -95,7 +95,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
 
     public MockServerProgram(ExternalConsole console) {
-        ExternalConsole.registerEventListener(new Object() {
+        console.registerEventListener(new Object() {
             @Handler
             public void onClose(ExternalConsoleClosingEvent event) {
                 Optional.ofNullable(server)
@@ -203,8 +203,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/", new MockHandler(mockHandlerArgs));
             server.setExecutor(null); // Default executor
-            ExternalConsole.setClosable(false);
-            ExternalConsole.println("Mock Server Activated (CTRL+C to stop)");
+            console.setClosable(false);
+            console.println("Mock Server Activated (CTRL+C to stop)");
             server.start();
             while ((!KeyPressedAdapter.isKeyPressed(
                     KeyEvent.VK_CONTROL
@@ -216,17 +216,17 @@ public class MockServerProgram implements ExternalConsoleCommand {
             if (server != null) {
                 server.stop(0);
                 server = null;
-                ExternalConsole.println("Mock Server Deactivated");
+                console.println("Mock Server Deactivated");
             }
-            ExternalConsole.setClosable(true);
+            console.setClosable(true);
             return 0;
         } catch (Exception e) {
             String msg = e.getMessage();
             if (e instanceof NoSuchElementException) {
                 msg = "--url is required (%s)".formatted(msg);
             }
-            ExternalConsole.println(msg);
-            ExternalConsole.setClosable(true);
+            console.println(msg);
+            console.setClosable(true);
             return -1;
         }
     }
@@ -376,7 +376,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
 
             } catch (IOException | URISyntaxException | InterruptedException e) {
-                ExternalConsole.println(ExceptionUtils.getStackTrace(e));
+                console.println(ExceptionUtils.getStackTrace(e));
                 throw new IOException(e);
             }
         }
@@ -421,8 +421,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
         private void handleMock(HttpExchange exchange) throws IOException {
 
-            ExternalConsole.println("<=>");
-            ExternalConsole.println("Caught Request to mock: (%s) %s".formatted(
+            console.println("<=>");
+            console.println("Caught Request to mock: (%s) %s".formatted(
                     exchange.getRequestMethod(),
                     exchange.getRequestURI().getPath()));
 
@@ -431,19 +431,19 @@ public class MockServerProgram implements ExternalConsoleCommand {
             hintType = HintType.STATUS_CODE;
             console.getOutputStream().write("Status Code: ".getBytes());
             var statusCode = Integer.parseInt(getInput(read));
-            ExternalConsole.println(statusCode);
+            console.println(statusCode);
 
             hintType = HintType.CONTENT_TYPE;
             console.getOutputStream().write("Content-Type: ".getBytes());
             var contentType = getInput(read);
             var contentTypeParsed = console.inputToArgs(contentType);
             contentType = contentTypeParsed.length > 0 ? contentTypeParsed[0] : contentType;
-            ExternalConsole.println(contentType);
+            console.println(contentType);
 
             hintType = HintType.HAS_BODY;
             console.getOutputStream().write("Has Body: ".getBytes());
             var hasBody = Boolean.parseBoolean(getInput(read));
-            ExternalConsole.println(hasBody);
+            console.println(hasBody);
             byte[] body = null;
             if (hasBody) {
                 hintType = HintType.BODY;
@@ -451,7 +451,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 var bodyPath = getInput(read);
                 var bodyPathParsed = console.inputToArgs(bodyPath);
                 bodyPath = bodyPathParsed.length > 0 ? bodyPathParsed[0] : bodyPath;
-                ExternalConsole.println(bodyPath);
+                console.println(bodyPath);
                 body = Files.readAllBytes(
                         Paths.get(bodyPath)
                 );
@@ -470,8 +470,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
             }
             os.close();
             hintType = HintType.NONE;
-            ExternalConsole.println("<=>");
-            ExternalConsole.println();
+            console.println("<=>");
+            console.println();
         }
 
 
@@ -480,7 +480,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
                 String targetHost
         ) throws IOException, URISyntaxException, InterruptedException {
             String targetUrl = targetHost + exchange.getRequestURI();
-            ExternalConsole.println("Forwarding request to: " + targetUrl);
+            console.println("Forwarding request to: " + targetUrl);
 
             URL url = new URL(targetUrl);
             var hasBody = List.of(

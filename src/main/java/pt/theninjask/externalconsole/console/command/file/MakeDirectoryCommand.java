@@ -1,5 +1,6 @@
 package pt.theninjask.externalconsole.console.command.file;
 
+import lombok.RequiredArgsConstructor;
 import pt.theninjask.externalconsole.console.ExternalConsole;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 
@@ -9,8 +10,10 @@ import java.nio.file.Paths;
 
 import static pt.theninjask.externalconsole.console.command.file.ChangeDirectoryCommand.getCurrentDir;
 
+@RequiredArgsConstructor
 public class MakeDirectoryCommand implements ExternalConsoleCommand {
 
+    private final ExternalConsole console;
     @Override
     public String getCommand() {
         return "mkdir";
@@ -29,18 +32,18 @@ public class MakeDirectoryCommand implements ExternalConsoleCommand {
                     Path newCurrentDir = getCurrentDir().resolve(Paths.get(args[0]));
                     File test = newCurrentDir.toFile();
                     if (test.exists()) {
-                        ExternalConsole.println(
+                        console.println(
                                 String.format("The path %s is not valid.", newCurrentDir.normalize().toAbsolutePath()));
                         break;
                     }
                     boolean result = test.mkdirs();
-                    ExternalConsole.println(String.format("The path %s was %ssuccessful",
+                    console.println(String.format("The path %s was %ssuccessful",
                             newCurrentDir.normalize().toAbsolutePath(), result ? "" : "un"));
                 }
-                case 0 -> ExternalConsole.println("The syntax of the command is incorrect");
+                case 0 -> console.println("The syntax of the command is incorrect");
             }
         } catch (Exception e) {
-            ExternalConsole.println(e);
+            console.println(e);
             return -1;
         }
         return 0;

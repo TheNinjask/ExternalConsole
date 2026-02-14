@@ -26,11 +26,11 @@ public class ViewVarCommand implements ExternalConsoleCommand {
         var vars = console.getAllVars();
         if (args.length == 0) {
             vars.forEach((key, value) ->
-                    ExternalConsole.println(
+                    console.println(
                             "Variable %1$s = %2$s".formatted(key, value)
                     ));
         } else {
-            ExternalConsole.println(
+            console.println(
                     "Variable %1$s = %2$s".formatted(args[0], vars.get(args[0]))
             );
         }

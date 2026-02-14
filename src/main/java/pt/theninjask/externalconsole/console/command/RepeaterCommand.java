@@ -8,6 +8,11 @@ import java.util.stream.IntStream;
 
 public class RepeaterCommand implements ExternalConsoleCommand {
 
+    private final ExternalConsole console;
+
+    public RepeaterCommand(ExternalConsole console) {
+        this.console = console;
+    }
     @Override
     public String getCommand() {
         return "cmdRepeater";
@@ -27,7 +32,7 @@ public class RepeaterCommand implements ExternalConsoleCommand {
         String cmdName = args[1];
         String[] cmdArgs = Arrays.copyOfRange(args, 2, args.length);
         for (int loop = 0; loop < amount; loop++) {
-            boolean exeRes = ExternalConsole.executeCommand(cmdName, cmdArgs);
+            boolean exeRes = console.executeCommand(cmdName, cmdArgs);
             if (!exeRes) {
                 return -2;
             }
@@ -46,7 +51,7 @@ public class RepeaterCommand implements ExternalConsoleCommand {
             return null;
         }
         String cmdName = currArgs[1];
-        ExternalConsoleCommand cmd = ExternalConsole.getCommand(cmdName);
+        ExternalConsoleCommand cmd = console.getCommand(cmdName);
         if (cmd == null)
             return null;
         String[] cmdArgs = Arrays.copyOfRange(currArgs, 2, currArgs.length);

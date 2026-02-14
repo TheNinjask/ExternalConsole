@@ -39,12 +39,12 @@ public class JythonProgram implements ExternalConsoleCommand {
                 }
                 return 0;
             }
-            console._executeCommand("cls");
+            console.executeCommand("cls");
             BufferedReader read = new BufferedReader(new InputStreamReader(console.getInputStream()));
             try (InteractiveConsole jython = new InteractiveConsole()) {
                 this.jython = jython;
                 this.isRunning = true;
-                console._println("Jython 2.7.3 (CTRL+Z to exit)");
+                console.println("Jython 2.7.3 (CTRL+Z to exit)");
                 while (!(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_Z))) {
                     String str;
                     if ((str = read.readLine()) != null)
@@ -53,8 +53,8 @@ public class JythonProgram implements ExternalConsoleCommand {
                 this.isRunning = false;
                 this.jython = null;
             }
-            console._executeCommand("cls");
-            console._println("Leaving Jython Interpreter ...");
+            console.executeCommand("cls");
+            console.println("Leaving Jython Interpreter ...");
         } catch (Exception e) {
             e.printStackTrace();
             return -1;

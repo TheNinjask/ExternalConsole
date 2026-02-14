@@ -1,14 +1,19 @@
 package pt.theninjask.externalconsole.console.command.core;
 
 import pt.theninjask.externalconsole.console.ExternalConsole;
+import pt.theninjask.externalconsole.console.ExternalConsoleAllCommandConsumerCommand;
 import pt.theninjask.externalconsole.console.ExternalConsoleCommand;
 import pt.theninjask.externalconsole.event.InputCommandExternalConsoleEvent;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
-public class AndCommand implements ExternalConsoleCommand {
+public class AndCommand implements ExternalConsoleAllCommandConsumerCommand {
 
+    private Map<String, ExternalConsoleCommand> allCommands;
     private final ExternalConsole console;
 
     public AndCommand(ExternalConsole console) {
@@ -56,10 +61,14 @@ public class AndCommand implements ExternalConsoleCommand {
 
     @Override
     public String[] getParamOptions(int number, String[] currArgs) {
-        return AndCommand.getParamOptions(console, number, currArgs);
+        return AndCommand.getParamOptions(getAllCommands(), number, currArgs);
     }
 
-    public static String[] getParamOptions(ExternalConsole console, int number, String[] currArgs) {
+    public static String[] getParamOptions(
+            Map<String, ExternalConsoleCommand> allCommands,
+            int number,
+            String[] currArgs
+    ) {
         int nextType = CMD;
         var it = Arrays.stream(currArgs).iterator();
         String lastCmd = null;
@@ -92,7 +101,7 @@ public class AndCommand implements ExternalConsoleCommand {
             default -> null;
             case ARGS_AMOUNT -> IntStream.range(0, 10).mapToObj(Integer::toString).toArray(String[]::new);
             case CMD_ARGS -> {
-                var cmd = console._getAllCommands().getOrDefault(lastCmd, null);
+                var cmd = allCommands.getOrDefault(lastCmd, null);
                 yield cmd == null ? null :
                         cmd.getParamOptions(
                                 lastCmdCurrentNumber,
@@ -110,7 +119,17 @@ public class AndCommand implements ExternalConsoleCommand {
     public String resultMessage(int result) {
         return switch (result) {
             case -1 -> "An exception has occurred!";
-            default -> ExternalConsoleCommand.super.resultMessage(result);
+            default -> ExternalConsoleAllCommandConsumerCommand.super.resultMessage(result);
         };
+    }
+
+    @Override
+    public void consumeCommandMapReference(Map<String, ExternalConsoleCommand> allCommands) {
+        this.allCommands = allCommands;
+    }
+
+    private Map<String, ExternalConsoleCommand> getAllCommands() {
+        return Optional.ofNullable(allCommands)
+                .orElseGet(Collections::emptyMap);
     }
 }
