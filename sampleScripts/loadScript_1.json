@@ -1,0 +1,17 @@
+[
+  {
+    "cmd": "loadVarsFile",
+    "args": [
+      "./sampleScripts/loadVarsFile_1.json"
+    ]
+  },
+  {
+    "cmd": "mockserver",
+    "args": [
+      "--url",
+      "https://www.google.com",
+      "--override-token",
+      "token"
+    ]
+  }
+]

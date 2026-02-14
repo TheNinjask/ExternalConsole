@@ -1,0 +1,19 @@
+[
+  {
+    "cmd": "&",
+    "args": [
+      "mockserver",
+      "4",
+      "--url",
+      "https://www.google.com",
+      "--override-token",
+      "Bearer token",
+      "mockserver",
+      "4",
+      "--url",
+      "https://www.google.com",
+      "--override-token",
+      "Bearer token"
+    ]
+  }
+]

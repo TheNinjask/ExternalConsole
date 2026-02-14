@@ -59,4 +59,9 @@ public class LoadVarsFileCommand implements ExternalConsoleCommand {
         };
     }
 
+    @Override
+    public boolean accessibleInCode() {
+        return true;
+    }
+
 }

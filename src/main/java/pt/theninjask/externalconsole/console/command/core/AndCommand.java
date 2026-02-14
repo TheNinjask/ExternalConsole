@@ -81,19 +81,17 @@ public class AndCommand implements ExternalConsoleCommand {
             }
             number++;
         }
-        switch (nextType) {
-            default:
-            case CMD:
-                return null;
-            case ARGS_AMOUNT:
-                return IntStream.range(0, 10).mapToObj(Integer::toString).toArray(String[]::new);
-            case CMD_ARGS:
+        return switch (nextType) {
+            default -> null;
+            case ARGS_AMOUNT -> IntStream.range(0, 10).mapToObj(Integer::toString).toArray(String[]::new);
+            case CMD_ARGS -> {
                 var cmd = console._getAllCommands().getOrDefault(lastCmd, null);
-                return cmd == null ? null :
+                yield cmd == null ? null :
                         cmd.getParamOptions(
                                 lastCmdCurrentNumber,
                                 Arrays.copyOfRange(currArgs, lastCmdNumberIndex + 1, currArgs.length));
-        }
+            }
+        };
     }
 
     @Override
