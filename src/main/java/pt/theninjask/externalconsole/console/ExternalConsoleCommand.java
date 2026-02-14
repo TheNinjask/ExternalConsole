@@ -66,4 +66,12 @@ public interface ExternalConsoleCommand {
     default boolean isDemo() {
         return false;
     }
+
+    /**
+     * Indicates whether this command can be added to the system tray menu.
+     * @return default false
+     */
+    default boolean canBeOnTray() {
+        return false;
+    }
 }

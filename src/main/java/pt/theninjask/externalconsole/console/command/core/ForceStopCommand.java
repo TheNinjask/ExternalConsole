@@ -28,4 +28,9 @@ public class ForceStopCommand implements ExternalConsoleCommand {
         return 0;
     }
 
+    @Override
+    public boolean canBeOnTray() {
+        return true;
+    }
+
 }

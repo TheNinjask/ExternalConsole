@@ -6,6 +6,8 @@ import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.listener.Handler;
+import org.jnativehook.GlobalScreen;
+import org.jnativehook.NativeHookException;
 import org.reflections.Reflections;
 import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
 import pt.theninjask.externalconsole.console.command.TimerCommand;
@@ -22,6 +24,7 @@ import pt.theninjask.externalconsole.stream.RedirectorInputStream;
 import pt.theninjask.externalconsole.stream.RedirectorOutputStream;
 import pt.theninjask.externalconsole.util.ColorTheme;
 import pt.theninjask.externalconsole.util.KeyPressedAdapter;
+import pt.theninjask.externalconsole.util.TrayManager;
 import pt.theninjask.externalconsole.util.Utils;
 
 import javax.swing.*;
@@ -36,6 +39,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.PrintStream;
 import java.io.Serial;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -880,7 +884,10 @@ public class ExternalConsole extends JFrame {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
+        logger.setLevel(Level.OFF);
+        System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
         setSystemStreams();
         registerEventListener(new Object() {
             @Handler
@@ -890,6 +897,7 @@ public class ExternalConsole extends JFrame {
             }
         });
         setViewable(true);
+        ExternalConsole.executeCommand("tray");
     }
 
 }
