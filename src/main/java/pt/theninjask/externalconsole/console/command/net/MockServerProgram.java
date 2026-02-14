@@ -3,6 +3,8 @@ package pt.theninjask.externalconsole.console.command.net;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import lombok.Builder;
+import lombok.Getter;
 import net.engio.mbassy.listener.Handler;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -15,7 +17,6 @@ import pt.theninjask.externalconsole.util.KeyPressedAdapter;
 import java.awt.event.KeyEvent;
 import java.io.*;
 import java.lang.reflect.Modifier;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -76,6 +77,18 @@ public class MockServerProgram implements ExternalConsoleCommand {
     private final Option mockUrlOpt = Option.builder("m")
             .longOpt("mock-url")
             .desc("Set endpoint for doing mocking")
+            .numberOfArgs(1)
+            .build();
+
+    private final Option overrideTokenOpt = Option.builder("o")
+            .longOpt("override-token")
+            .desc("Override the token used for url when redirecting")
+            .numberOfArgs(1)
+            .build();
+
+    private final Option overrideCookieOpt = Option.builder("c")
+            .longOpt("override-cookie")
+            .desc("Override the cookie used for url when redirecting")
             .numberOfArgs(1)
             .build();
     private static HttpServer server = null;
@@ -140,6 +153,14 @@ public class MockServerProgram implements ExternalConsoleCommand {
                         Map.entry(
                                 mockUrlOpt,
                                 () -> new String[]{"http://", "https://", "https://serebii.net", "https://github.com/TheNinjask/ExternalConsole"}
+                        ),
+                        Map.entry(
+                                overrideTokenOpt,
+                                () -> new String[]{"Bearer XYZ"}
+                        ),
+                        Map.entry(
+                                overrideCookieOpt,
+                                () -> new String[]{"cookie=pookie"}
                         )
                 );
     }
@@ -178,29 +199,9 @@ public class MockServerProgram implements ExternalConsoleCommand {
                     .map(cmd::getOptionValue)
                     .map(Integer::parseInt)
                     .orElse(8080);
-            String url = Optional.of(urlOpt)
-                    .map(Option::getOpt)
-                    .map(cmd::getOptionValue)
-                    .orElseThrow();
-            String literal = Optional.of(literalOpt)
-                    .map(Option::getOpt)
-                    .map(cmd::getOptionValue)
-                    .orElse(null);
-            String regex = Optional.of(regexOpt)
-                    .map(Option::getOpt)
-                    .map(cmd::getOptionValue)
-                    .orElse(null);
-            String mockUrl = Optional.of(mockUrlOpt)
-                    .map(Option::getOpt)
-                    .map(cmd::getOptionValue)
-                    .orElse(null);
+            MockHandlerArgs mockHandlerArgs = getMockHandlerArgs(cmd);
             server = HttpServer.create(new InetSocketAddress(port), 0);
-            server.createContext("/", new MockHandler(
-                    url,
-                    literal,
-                    regex,
-                    mockUrl
-            ));
+            server.createContext("/", new MockHandler(mockHandlerArgs));
             server.setExecutor(null); // Default executor
             ExternalConsole.setClosable(false);
             ExternalConsole.println("Mock Server Activated (CTRL+C to stop)");
@@ -228,6 +229,42 @@ public class MockServerProgram implements ExternalConsoleCommand {
             ExternalConsole.setClosable(true);
             return -1;
         }
+    }
+
+    private MockHandlerArgs getMockHandlerArgs(CommandLine cmd) {
+        String url = Optional.of(urlOpt)
+                .map(Option::getOpt)
+                .map(cmd::getOptionValue)
+                .orElseThrow();
+        String literal = Optional.of(literalOpt)
+                .map(Option::getOpt)
+                .map(cmd::getOptionValue)
+                .orElse(null);
+        String regex = Optional.of(regexOpt)
+                .map(Option::getOpt)
+                .map(cmd::getOptionValue)
+                .orElse(null);
+        String mockUrl = Optional.of(mockUrlOpt)
+                .map(Option::getOpt)
+                .map(cmd::getOptionValue)
+                .orElse(null);
+        String overrideToken = Optional.of(overrideTokenOpt)
+                .map(Option::getOpt)
+                .map(cmd::getOptionValue)
+                .orElse(null);
+        String overrideCookie = Optional.of(overrideCookieOpt)
+                .map(Option::getOpt)
+                .map(cmd::getOptionValue)
+                .orElse(null);
+        MockHandlerArgs mockHandlerArgs = MockHandlerArgs.builder()
+                .url(url)
+                .literal(literal)
+                .regex(regex)
+                .mockUrl(mockUrl)
+                .overrideToken(overrideToken)
+                .overrideCookie(overrideCookie)
+                .build();
+        return mockHandlerArgs;
     }
 
     @Override
@@ -283,6 +320,17 @@ public class MockServerProgram implements ExternalConsoleCommand {
         };
     }
 
+    @Getter
+    @Builder
+    static class MockHandlerArgs {
+        private String url;
+        private String literal;
+        private String regex;
+        private String mockUrl;
+        private String overrideToken;
+        private String overrideCookie;
+    }
+
     // Custom handler that catches ALL requests to any path
     static class MockHandler implements HttpHandler {
 
@@ -292,19 +340,22 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
         private final String mockUrl;
 
+        private final String overrideToken;
+
+        private final String overrideCookie;
+
         private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
                 () -> !(isKeyPressed(KeyEvent.VK_CONTROL) && isKeyPressed(KeyEvent.VK_C));
 
         public MockHandler(
-                String url,
-                String literal,
-                String regex,
-                String mockUrl
+                MockHandlerArgs args
         ) {
-            this.url = url;
-            this.literal = literal;
-            this.regex = regex == null ? null : Pattern.compile(regex);
-            this.mockUrl = mockUrl;
+            this.url = args.getUrl();
+            this.literal = args.getLiteral();
+            this.regex = args.getRegex() == null ? null : Pattern.compile(args.getRegex());
+            this.mockUrl = args.getMockUrl();
+            this.overrideToken = args.getOverrideToken();
+            this.overrideCookie = args.getOverrideCookie();
         }
 
         @Override
@@ -446,19 +497,27 @@ public class MockServerProgram implements ExternalConsoleCommand {
                                     : HttpRequest.BodyPublishers.noBody()
                     );
 
-            exchange.getRequestHeaders().forEach((key, values) -> {
-                if (!List.of(
-                        "connection",
-                        "host",
-                        "content-length"
-                ).contains(key.toLowerCase()))
-                    requestBuilder.headers(
-                            Stream.concat(
-                                            Stream.of(key),
-                                            values.stream())
-                                    .toArray(String[]::new)
-                    );
-            });
+            exchange.getRequestHeaders()
+                    .forEach((key, values) -> {
+                        if (List.of("connection", "host", "content-length")
+                                .contains(key.toLowerCase()))
+                            return;
+                        if (Objects.equals(
+                                "authorization",
+                                key.toLowerCase()) && overrideToken != null
+                        ) {
+                            requestBuilder.headers(
+                                    Stream.of(key, overrideToken)
+                                            .toArray(String[]::new)
+                            );
+                        }
+                        requestBuilder.headers(
+                                Stream.concat(
+                                                Stream.of(key),
+                                                values.stream())
+                                        .toArray(String[]::new)
+                        );
+                    });
 
             HttpResponse<byte[]> response = HttpClient.newHttpClient()
                     .send(requestBuilder.build(), HttpResponse.BodyHandlers.ofByteArray());

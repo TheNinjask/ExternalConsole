@@ -252,7 +252,7 @@ public class ExternalConsole extends JFrame {
 
     public static boolean executeCommand(String cmd, String... args) {
         ExternalConsoleCommand ecmd = singleton.cmds.get(cmd);
-        if (ecmd == null || !ecmd.accessibleInCode() || ecmd.isProgram())
+        if (ecmd == null || !ecmd.accessibleInCode() || isProgramRunning.get())
             return false;
         args = singleton.parseArgsVars(args);
         int result = ecmd.executeCommand(args);
