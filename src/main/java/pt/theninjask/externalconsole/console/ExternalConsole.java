@@ -882,9 +882,9 @@ public class ExternalConsole extends JFrame {
     }
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
         Logger logger = Logger.getLogger(GlobalScreen.class.getPackage().getName());
         logger.setLevel(Level.OFF);
-        System.setProperty("Dlog4j2.formatMsgNoLookups", "true");
         setSystemStreams();
         addCloseHandlingAsMain();
         setViewable(true);
