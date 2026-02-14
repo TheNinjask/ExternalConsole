@@ -8,7 +8,6 @@ import net.engio.mbassy.bus.config.BusConfiguration;
 import net.engio.mbassy.bus.config.Feature;
 import net.engio.mbassy.bus.config.IBusConfiguration;
 import net.engio.mbassy.listener.Handler;
-import org.jnativehook.GlobalScreen;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.reflections.Reflections;
 import pt.theninjask.externalconsole.console.command.LoadingExternalConsoleCommand;
@@ -720,7 +719,7 @@ public class ExternalConsole extends JFrame {
                 }
                 int i = 3;
                 while (proc.isAlive() && !isProgramRunning.get()) {
-                    if(event.isDisableLoadingBar())
+                    if (event.isDisableLoadingBar())
                         continue;
                     input.setText(String.format("Processing %s", loading[i]));
                     proc.join((int) loading[1]);
@@ -901,9 +900,11 @@ public class ExternalConsole extends JFrame {
     private static void parseArgsAsMain(String[] args) {
         if (args.length > 0) {
             ExternalConsole.getSingleton()
-                    .executeCommand(
-                            args[0],
-                            Arrays.copyOfRange(args, 1, args.length)
+                    .onCommand(
+                            new InputCommandExternalConsoleEvent(
+                                    ExternalConsole.getSingleton(),
+                                    args
+                            )
                     );
         }
     }
