@@ -505,12 +505,8 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
             byte[] responseBody = response.body();
 
-            var responseHeaders = new HashMap<>(response.headers().map());
-            responseHeaders.keySet()
-                    .stream()
-                    .filter("Access-Control-Allow-Origin"::equalsIgnoreCase)
-                    .findFirst()
-                    .ifPresent(responseHeaders::remove);
+            Map<String, List<String>> responseHeaders = new HashMap<>(response.headers().map());
+            handleCleanUpHeadersRedirect(responseHeaders);
 
             exchange.getResponseHeaders().putAll(responseHeaders);
             exchange.getResponseHeaders().remove(null);
@@ -533,6 +529,17 @@ public class MockServerProgram implements ExternalConsoleCommand {
             if (responseBody.length > 0)
                 os.write(responseBody);
             os.close();
+        }
+
+        private static void handleCleanUpHeadersRedirect(Map<String, List<String>> responseHeaders) {
+            responseHeaders.keySet()
+                    .stream()
+                    .filter(v -> Set.of(
+                                    "access-control-allow-origin",
+                                    "content-length")
+                            .contains(v.toLowerCase()))
+                    .findFirst()
+                    .ifPresent(responseHeaders::remove);
         }
 
         private void handleRedirectHeaders(
