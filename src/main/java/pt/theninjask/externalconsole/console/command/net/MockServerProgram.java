@@ -212,7 +212,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
             //console.setClosable(false);
             console.println("Mock Server Activated (CTRL+C to stop)");
             server.start();
-            while (!KeyPressedAdapter.isCTRLAndCPressedNative() && server != null){
+            while (!KeyPressedAdapter.isCTRLAndZPressedNative() && server != null){
                 // Program Loop
             }
             if (server != null) {
@@ -359,7 +359,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
         private final String overrideCookie;
 
         private final static Supplier<Boolean> DEFAULT_INPUT_LOOP =
-                () -> !KeyPressedAdapter.isCTRLAndCPressedNative();
+                () -> !KeyPressedAdapter.isCTRLAndZPressedNative();
 
         public MockHandler(
                 MockHandlerArgs args

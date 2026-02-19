@@ -61,4 +61,12 @@ public class KeyPressedAdapter {
         );
     }
 
+    public static boolean isCTRLAndZPressedNative(){
+        return KeyPressedAdapter.isKeyPressedNative(
+                NativeKeyEvent.VC_CONTROL
+        ) && KeyPressedAdapter.isKeyPressedNative(
+                NativeKeyEvent.VC_Z
+        );
+    }
+
 }
