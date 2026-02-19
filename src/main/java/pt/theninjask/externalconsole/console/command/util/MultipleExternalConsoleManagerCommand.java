@@ -114,6 +114,7 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
             c.onCommand(cmd);
         });
         console.executeCommand("top", "--true");
+        console.println("Multiple EC Manager Activated (CTRL+Z to stop)");
         while (true) {
             if (KeyPressedAdapter.isCTRLAndZPressedNative())
                 break;
