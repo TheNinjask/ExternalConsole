@@ -210,7 +210,7 @@ public class MockServerProgram implements ExternalConsoleCommand {
             server.createContext("/", new MockHandler(mockHandlerArgs));
             server.setExecutor(null); // Default executor
             //console.setClosable(false);
-            console.println("Mock Server Activated (CTRL+C to stop)");
+            console.println("Mock Server Activated (CTRL+Z to stop)");
             server.start();
             while (!KeyPressedAdapter.isCTRLAndZPressedNative() && server != null){
                 // Program Loop
