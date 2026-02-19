@@ -115,7 +115,7 @@ public class MultipleExternalConsoleManagerCommand implements ExternalConsoleAll
         });
         console.executeCommand("top", "--true");
         while (true) {
-            if (KeyPressedAdapter.isCTRLAndCPressedNative())
+            if (KeyPressedAdapter.isCTRLAndZPressedNative())
                 break;
             if (otherConsoles.stream().map(Pair::getKey).noneMatch(ExternalConsole::isDisplayable))
                 break;
