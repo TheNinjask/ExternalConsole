@@ -15,9 +15,11 @@ public class TrayManagerCommand implements ExternalConsoleAllCommandConsumerComm
 
     private Map<String, ExternalConsoleCommand> allCommands;
     private final ExternalConsole console;
+    private final TrayManager trayManager;
 
     public TrayManagerCommand(ExternalConsole console) {
         this.console = console;
+        this.trayManager = new TrayManager();
     }
 
     @Override
@@ -36,8 +38,8 @@ public class TrayManagerCommand implements ExternalConsoleAllCommandConsumerComm
     }
 
     private int stop() {
-        TrayManager.getInstance().clearMenuItems();
-        TrayManager.getInstance().stop();
+        trayManager.clearMenuItems();
+        trayManager.stop();
         console.setViewable(true);
         ExternalConsole.setSystemStreams();
         return 0;
@@ -49,9 +51,8 @@ public class TrayManagerCommand implements ExternalConsoleAllCommandConsumerComm
         List<MenuItem> menuItems = convertCommandsToMenuItems(
                 getAllCommands().values()
         );
-        menuItems.forEach(item -> TrayManager.getInstance().addMenuItem(item));
-        TrayManager.getInstance()
-                .startUp();
+        menuItems.forEach(trayManager::addMenuItem);
+        trayManager.startUp();
         return 0;
     }
 

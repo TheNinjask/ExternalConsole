@@ -8,88 +8,82 @@ import java.util.List;
 
 public class TrayManager {
 
-	private static final TrayManager singleton = new TrayManager();
+    private List<MenuItem> options = new ArrayList<>();
 
-	private List<MenuItem> options = new ArrayList<>();
+    private boolean isActive = false;
 
-	private boolean isActive = false;
+    private TrayIcon trayIcon = new TrayIcon(new ImageIcon(Utils.ICON_PATH).getImage());
 
-	private TrayIcon trayIcon = new TrayIcon(new ImageIcon(Utils.ICON_PATH).getImage());
+    private PopupMenu popup = new PopupMenu();
 
-	private PopupMenu popup = new PopupMenu();
+    public TrayManager() {
+        trayIcon.setImageAutoSize(true);
+    }
 
-	private TrayManager() {
-		trayIcon.setImageAutoSize(true);
-	}
+    public boolean isSupported() {
+        return SystemTray.isSupported();
+    }
 
-	public static TrayManager getInstance() {
-		return singleton;
-	}
+    public boolean startUp() {
+        if (!isActive && !options.isEmpty() && SystemTray.isSupported()) {
+            SystemTray tray = SystemTray.getSystemTray();
+            options.forEach(opt -> {
+                popup.add(opt);
+            });
+            trayIcon.setPopupMenu(popup);
+            try {
+                tray.add(trayIcon);
+            } catch (AWTException e) {
+                return false;
+            }
+            isActive = true;
+            return isActive;
+        }
+        return false;
+    }
 
-	public boolean isSupported() {
-		return SystemTray.isSupported();
-	}
+    public boolean refresh() {
+        return stop() && startUp();
+    }
 
-	public boolean startUp() {
-		if (!isActive && !options.isEmpty() && SystemTray.isSupported()) {
-			SystemTray tray = SystemTray.getSystemTray();
-			options.forEach(opt->{
-				popup.add(opt);
-			});
-			trayIcon.setPopupMenu(popup);
-			try {
-				tray.add(trayIcon);
-			} catch (AWTException e) {
-				return false;
-			}
-			isActive = true;
-			return isActive;
-		}
-		return false;
-	}
+    public boolean stop() {
+        if (isActive && SystemTray.isSupported()) {
+            SystemTray tray = SystemTray.getSystemTray();
+            tray.remove(trayIcon);
+            isActive = false;
+        }
+        return true;
+    }
 
-	public boolean refresh() {
-		return stop() && startUp();
-	}
+    public TrayManager setToolTip(String tooltip) {
+        trayIcon.setToolTip(tooltip);
+        return this;
+    }
 
-	public boolean stop() {
-		if (isActive && SystemTray.isSupported()) {
-			SystemTray tray = SystemTray.getSystemTray();
-			tray.remove(trayIcon);
-			isActive=false;
-		}
-		return true;
-	}
+    public TrayManager setImage(Image image) {
+        trayIcon.setImage(image);
+        return this;
+    }
 
-	public TrayManager setToolTip(String tooltip) {
-		trayIcon.setToolTip(tooltip);
-		return this;
-	}
+    public TrayManager setImage(URL image) {
+        trayIcon.setImage(new ImageIcon(image).getImage());
+        return this;
+    }
 
-	public TrayManager setImage(Image image) {
-		trayIcon.setImage(image);
-		return this;
-	}
+    public TrayManager addMenuItem(MenuItem item) {
+        options.add(item);
+        return this;
+    }
 
-	public TrayManager setImage(URL image) {
-		trayIcon.setImage(new ImageIcon(image).getImage());
-		return this;
-	}
+    public TrayManager removeMenuItem(MenuItem item) {
+        options.remove(item);
+        return this;
+    }
 
-	public TrayManager addMenuItem(MenuItem item) {
-		options.add(item);
-		return this;
-	}
-
-	public TrayManager removeMenuItem(MenuItem item) {
-		options.remove(item);
-		return this;
-	}
-
-	public TrayManager clearMenuItems() {
-		options.clear();
-		popup.removeAll();
-		return this;
-	}
+    public TrayManager clearMenuItems() {
+        options.clear();
+        popup.removeAll();
+        return this;
+    }
 
 }
