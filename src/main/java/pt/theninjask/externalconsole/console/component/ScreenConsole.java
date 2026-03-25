@@ -64,6 +64,12 @@ public class ScreenConsole extends JScrollPane {
         return autoScroll;
     }
 
+    public void print(String msg) {
+        String.format("%s", msg)
+                .chars()
+                .forEachOrdered(c -> console.getOutputStream()
+                        .write(c));
+    }
     public void println(String msg) {
         String.format("%s\n", msg)
                 .chars()

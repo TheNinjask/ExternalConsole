@@ -23,6 +23,11 @@ public class ExternalConsoleOutputStream extends OutputStream {
                 console._getScreen().setCaretPosition(doc.getLength());
             if (b == '\n')
                 console._clearExtraLines();
+            else if(b == '\r'){
+                var text = doc.getText(0, doc.getLength());
+                var offset = text.lastIndexOf('\n');
+                doc.remove(offset + 1, doc.getLength() - offset - 1);
+            }
             console._getScroll().repaint();
             console._getScroll().revalidate();
         } catch (BadLocationException e) {
