@@ -565,8 +565,16 @@ public class ExternalConsole extends JFrame {
          */
     }
 
+    public void print(Object msg) {
+        print(Objects.toString(msg));
+    }
+
     public void println(Object msg) {
         println(Objects.toString(msg));
+    }
+
+    public void print(String msg) {
+        screenConsole.print(msg);
     }
 
     public void println(String msg) {
