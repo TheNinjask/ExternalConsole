@@ -26,6 +26,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -56,6 +57,12 @@ public class MockServerProgram implements ExternalConsoleCommand {
 
     private final Option portOpt = Option.builder("p")
             .longOpt("port")
+            .desc("Set port to open")
+            .numberOfArgs(1)
+            .build();
+
+    private final Option threadPoolSizeOpt = Option.builder("t")
+            .longOpt("thread-pool-size")
             .desc("Set port to open")
             .numberOfArgs(1)
             .build();
@@ -160,6 +167,10 @@ public class MockServerProgram implements ExternalConsoleCommand {
                         Map.entry(
                                 overrideCookieOpt,
                                 () -> new String[]{"cookie=pookie"}
+                        ),
+                        Map.entry(
+                                threadPoolSizeOpt,
+                                () -> IntStream.range(1, 10).mapToObj(Integer::toString).toArray(String[]::new)
                         )
                 );
     }
@@ -205,10 +216,15 @@ public class MockServerProgram implements ExternalConsoleCommand {
                     .map(cmd::getOptionValue)
                     .map(Integer::parseInt)
                     .orElse(8080);
+            int threadPoolSize = Optional.of(threadPoolSizeOpt)
+                    .map(Option::getOpt)
+                    .map(cmd::getOptionValue)
+                    .map(Integer::parseInt)
+                    .orElse(10);
             MockHandlerArgs mockHandlerArgs = getMockHandlerArgs(cmd);
             server = HttpServer.create(new InetSocketAddress(port), 0);
             server.createContext("/", new MockHandler(mockHandlerArgs));
-            server.setExecutor(null); // Default executor
+            server.setExecutor(Executors.newFixedThreadPool(threadPoolSize)); // Default executor
             //console.setClosable(false);
             console.println("Mock Server Activated (CTRL+Z to stop)");
             server.start();
