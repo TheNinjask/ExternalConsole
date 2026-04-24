@@ -5,29 +5,117 @@ import pt.theninjask.externalconsole.console.ExternalConsole;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.StyledDocument;
 import java.io.OutputStream;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
 
 public class ExternalConsoleOutputStream extends OutputStream {
 
+    private Optional<Integer> offset;
+
     private final ExternalConsole console;
+
+    private final Map<Character, Rule> characterRuleMap;
+
+    private final Runnable defaultPreInsertPhaseLogic;
+
+    private final Runnable defaultPostInsertPhaseLogic;
+
+    private record Rule(
+            ExternalConsoleOutputStream parent,
+            boolean allowInsertion,
+            Consumer<ExternalConsoleOutputStream> preInsertPhaseLogic,
+            Consumer<ExternalConsoleOutputStream> postInsertPhaseLogic
+    ) {
+
+        public void preInsertPhase() {
+            preInsertPhaseLogic.accept(parent);
+        }
+
+        public boolean allowInsertion() {
+            return allowInsertion;
+        }
+
+        public void postInsertPhase() {
+            postInsertPhaseLogic.accept(parent);
+        }
+    }
 
     public ExternalConsoleOutputStream(ExternalConsole console) {
         this.console = console;
+        this.offset = Optional.empty();
+        this.defaultPreInsertPhaseLogic = () -> {
+            try {
+                StyledDocument doc = console._getScreen().getStyledDocument();
+                if (offset.isPresent())
+                    doc.remove(offset.get(), 1);
+            } catch (BadLocationException e) {
+                throw new RuntimeException(e);
+            }
+        };
+        this.defaultPostInsertPhaseLogic = () -> {
+        };
+        this.characterRuleMap = Map.ofEntries(
+                Map.entry(
+                        '\r',
+                        new Rule(
+                                this,
+                                false,
+                                (ignore) -> {
+                                },
+                                (parent) -> {
+                                    try {
+                                        StyledDocument doc = parent.console._getScreen().getStyledDocument();
+                                        String text = doc.getText(0, doc.getLength());
+                                        parent.offset = Optional.of(text.lastIndexOf('\n') + 1);
+                                    } catch (BadLocationException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                        )
+                ),
+                Map.entry(
+                        '\n',
+                        new Rule(
+                                this,
+                                true,
+                                (parent) -> parent.offset = Optional.empty(),
+                                (parent) -> {
+                                    try {
+                                        parent.console._clearExtraLines();
+                                        parent.offset = Optional.empty();
+                                    } catch (BadLocationException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                        )
+                )
+        );
     }
 
     @Override
     public void write(int b) {
         try {
+            Optional<Rule> charRuleOpt = Optional.ofNullable(characterRuleMap.get((char) b));
+
             StyledDocument doc = console._getScreen().getStyledDocument();
-            doc.insertString(doc.getLength(), Character.toString(b), null);
+
+            charRuleOpt.map(Rule::preInsertPhaseLogic)
+                    .ifPresentOrElse(c -> c.accept(this),
+                            defaultPreInsertPhaseLogic);
+
+            boolean allowInsertion = charRuleOpt.map(Rule::allowInsertion)
+                    .orElse(true);
+            if (allowInsertion)
+                doc.insertString(offset.orElse(doc.getLength()), Character.toString(b), null);
+            offset = offset.map(v -> v + 1);
+
+            charRuleOpt.map(Rule::postInsertPhaseLogic)
+                    .ifPresentOrElse(c -> c.accept(this),
+                            defaultPostInsertPhaseLogic);
+
             if (console._getAutoScroll())
                 console._getScreen().setCaretPosition(doc.getLength());
-            if (b == '\n')
-                console._clearExtraLines();
-            else if(b == '\r'){
-                var text = doc.getText(0, doc.getLength());
-                var offset = text.lastIndexOf('\n');
-                doc.remove(offset + 1, doc.getLength() - offset - 1);
-            }
             console._getScroll().repaint();
             console._getScroll().revalidate();
         } catch (BadLocationException e) {
