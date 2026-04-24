@@ -100,9 +100,7 @@ public class ExternalConsoleOutputStream extends OutputStream {
 
             StyledDocument doc = console._getScreen().getStyledDocument();
 
-            charRuleOpt.map(Rule::preInsertPhaseLogic)
-                    .ifPresentOrElse(c -> c.accept(this),
-                            defaultPreInsertPhaseLogic);
+            charRuleOpt.ifPresentOrElse(Rule::preInsertPhase, defaultPreInsertPhaseLogic);
 
             boolean allowInsertion = charRuleOpt.map(Rule::allowInsertion)
                     .orElse(true);
@@ -110,9 +108,7 @@ public class ExternalConsoleOutputStream extends OutputStream {
                 doc.insertString(offset.orElse(doc.getLength()), Character.toString(b), null);
             offset = offset.map(v -> v + 1);
 
-            charRuleOpt.map(Rule::postInsertPhaseLogic)
-                    .ifPresentOrElse(c -> c.accept(this),
-                            defaultPostInsertPhaseLogic);
+            charRuleOpt.ifPresentOrElse(Rule::postInsertPhase, defaultPostInsertPhaseLogic);
 
             if (console._getAutoScroll())
                 console._getScreen().setCaretPosition(doc.getLength());
