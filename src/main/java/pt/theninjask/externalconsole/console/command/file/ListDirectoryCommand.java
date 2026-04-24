@@ -15,7 +15,7 @@ import static pt.theninjask.externalconsole.console.command.file.ChangeDirectory
 @RequiredArgsConstructor
 public class ListDirectoryCommand implements ExternalConsoleCommand {
 
-    private static ExternalConsole console;
+    private final ExternalConsole console;
     @Override
     public String getCommand() {
         return "ls";
